@@ -1,0 +1,24 @@
+{
+  "name": "eilandrijk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Eilandrijk – een strategiespel op een eiland van zeshoeken.",
+  "scripts": {
+    "start": "npx --yes serve www -l 8080",
+    "test": "node tests/simulate.js",
+    "cap:sync": "npx cap sync",
+    "ios": "npx cap open ios",
+    "android": "npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor-community/admob": "^8.4.2",
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/core": "^8.6.2",
+    "@capacitor/ios": "^8.6.2",
+    "@revenuecat/purchases-capacitor": "^14.1.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.6.2"
+  }
+}

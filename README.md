@@ -1,0 +1,53 @@
+# Eilandrijk
+
+Een strategiespel voor je telefoon. Je begint met een kleine hoofdstad op een eiland van zeshoeken.
+Verover vakje voor vakje het eiland, beheer je goud en versla de computertegenstanders.
+
+- **30 levels**: 1 t/m 10 gratis, 11 t/m 30 met Premium
+- Korte potjes van 5 tot 15 minuten, goed te spelen met één hand
+- Werkt zonder internet
+
+## Spelregels in het kort
+
+| Eenheid | Kracht | Prijs | Soldij/beurt | Stappen |
+|---|---|---|---|---|
+| 🏹 Verkenner | 1 | 10 | 1 | 3 |
+| ⚔️ Soldaat | 2 | 20 | 2 | 2 |
+| 🐎 Ridder | 3 | 35 | 4 | 2 |
+| 💣 Katapult | 4 | 50 | 6 | 1 |
+
+- Elk vakje geeft 1 goud per beurt. Dorp en boerderij geven +2, je hoofdstad +3.
+- Je verovert een vakje alleen als je kracht **groter** is dan de verdediging van dat vakje.
+  Bos geeft +1, een toren verdedigt met 2, een hoofdstad met 2. De verdediging is nooit hoger dan 3.
+- Eenheden kosten elke beurt soldij. Is je goud op, dan lopen je duurste eenheden weg.
+- Je wint als je alle vijandelijke hoofdsteden hebt veroverd. Win je snel, dan krijg je 3 sterren.
+
+## Zelf spelen op je computer
+
+```bash
+npm start            # of: python3 -m http.server 8080 -d www
+```
+Open daarna http://localhost:8080 en zet je browser in telefoonweergave.
+Aankopen en reclame zijn in de browser **gesimuleerd** (testmodus).
+
+```bash
+npm test             # laat de computer alle 30 levels tegen zichzelf spelen
+```
+
+## Mappen
+
+```
+www/                 het spel zelf (HTML, CSS, JavaScript)
+  js/game.js         spelregels, kaarten maken, levels
+  js/ai.js           computertegenstanders
+  js/render.js       tekenen van het speelveld
+  js/store.js        verdienmodel: in-app aankopen en advertenties
+  js/main.js         schermen en bediening
+docs/                verdienmodel, stappenplan App Store, privacybeleid
+tests/simulate.js    automatische test
+capacitor.config.json  instellingen om er een iOS/Android-app van te maken
+```
+
+## Naar de App Store
+
+Zie [docs/APP-STORE-STAPPEN.md](docs/APP-STORE-STAPPEN.md) en [docs/VERDIENMODEL.md](docs/VERDIENMODEL.md).

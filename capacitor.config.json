@@ -1,0 +1,7 @@
+{
+  "appId": "nl.meesterzeth.eilandrijk",
+  "appName": "Eilandrijk",
+  "webDir": "www",
+  "ios": { "contentInset": "never" },
+  "android": { "backgroundColor": "#0e2a3d" }
+}

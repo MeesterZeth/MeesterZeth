@@ -1,0 +1,10 @@
+{
+  "name": "Eilandrijk",
+  "short_name": "Eilandrijk",
+  "start_url": "index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0e2a3d",
+  "theme_color": "#0e2a3d",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

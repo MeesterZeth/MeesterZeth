@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#0e2a3d">
+  <title>Eilandrijk</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Hoofdmenu -->
+  <section id="screen-menu" class="screen active">
+    <div class="menu-wrap">
+      <img src="icon.svg" alt="" class="logo">
+      <h1>Eilandrijk</h1>
+      <p class="tagline">Verover het eiland, vakje voor vakje.</p>
+      <button class="btn primary big" id="btn-play">▶ Spelen</button>
+      <button class="btn big" id="btn-levels">🗺️ Levels</button>
+      <button class="btn big" id="btn-shop">🛒 Winkel</button>
+      <div class="row">
+        <button class="btn" id="btn-help">❓ Uitleg</button>
+        <button class="btn" id="btn-settings">⚙️ Instellingen</button>
+      </div>
+      <p class="small" id="menu-stars"></p>
+    </div>
+  </section>
+
+  <!-- Levelkeuze -->
+  <section id="screen-levels" class="screen">
+    <header class="bar">
+      <button class="btn icon" data-back>←</button>
+      <h2>Levels</h2>
+      <span id="levels-stars" class="pill"></span>
+    </header>
+    <div id="level-grid" class="level-grid"></div>
+  </section>
+
+  <!-- Spel -->
+  <section id="screen-game" class="screen">
+    <header class="bar hud">
+      <button class="btn icon" id="btn-pause">☰</button>
+      <div class="hud-item"><span>💰</span><b id="hud-gold">0</b><small id="hud-net"></small></div>
+      <div class="hud-item"><span>⏳</span><b id="hud-turn">1</b></div>
+      <div id="hud-players" class="hud-players"></div>
+    </header>
+    <div class="board"><canvas id="board"></canvas><div id="toast" class="toast"></div></div>
+    <footer class="panel">
+      <div id="panel-info" class="panel-info"></div>
+      <div id="panel-actions" class="panel-actions"></div>
+      <button class="btn primary end" id="btn-end">Einde beurt ➜</button>
+    </footer>
+  </section>
+
+  <!-- Venster (wordt gevuld door de code) -->
+  <div id="modal" class="modal hidden"><div class="modal-box" id="modal-box"></div></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
