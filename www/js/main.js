@@ -148,8 +148,11 @@ function openSettings() {
       storage.update(st => { st.color = b.dataset.color; });
       openSettings();
     });
-    box.querySelector('[data-reset]').onclick = () => {
-      if (window.confirm('Weet je zeker dat je alle sterren wilt wissen?')) { storage.reset(); openSettings(); }
+    const reset = box.querySelector('[data-reset]');
+    reset.onclick = () => {
+      if (reset.dataset.armed) { storage.reset(); openSettings(); return; }
+      reset.dataset.armed = '1';
+      reset.textContent = 'Tik nog een keer om alle sterren te wissen';
     };
     box.querySelector('[data-close]').onclick = () => { closeModal(); refreshMenu(); };
   });

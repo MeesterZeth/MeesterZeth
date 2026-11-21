@@ -115,10 +115,9 @@ export async function purchase(productKey) {
       return false;
     }
   }
-  // Testmodus in de browser.
-  const ok = window.confirm(`TESTMODUS\n\n${prod.title} kopen voor ${prod.price}?\n(Er wordt niets afgeschreven.)`);
-  if (ok) grant(productKey);
-  return ok;
+  // Testmodus in de browser: direct toekennen, er wordt niets afgeschreven.
+  grant(productKey);
+  return true;
 }
 
 export async function restore() {
