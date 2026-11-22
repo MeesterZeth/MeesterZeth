@@ -15,6 +15,9 @@ if [ ! -f "$PLIST" ]; then
   exit 1
 fi
 
+# Naam onder het icoon op het beginscherm
+plutil -replace CFBundleDisplayName -string "Eilandrijk" "$PLIST"
+
 # Reclame (Google AdMob)
 plutil -replace GADApplicationIdentifier -string "$ADMOB_APP_ID" "$PLIST"
 plutil -replace SKAdNetworkItems -json '[{"SKAdNetworkIdentifier":"cstr6suwn9.skadnetwork"}]' "$PLIST"
@@ -31,4 +34,4 @@ plutil -replace UISupportedInterfaceOrientations -json '["UIInterfaceOrientation
 # Alleen iPhone, geen iPad
 sed -i '' 's/TARGETED_DEVICE_FAMILY = "1,2";/TARGETED_DEVICE_FAMILY = 1;/g' "$PBX"
 
-echo "✅ iOS-instellingen staan goed (reclame, volg-vraag, alleen iPhone, staand scherm)."
+echo "✅ iOS-instellingen staan goed (naam, reclame, volg-vraag, alleen iPhone, staand scherm)."
