@@ -7,6 +7,10 @@ Verover vakje voor vakje het eiland, beheer je goud en versla de computertegenst
 - Korte potjes van 5 tot 15 minuten, goed te spelen met één hand
 - Werkt zonder internet
 - Beurttimer (uit, 30, 60 of 90 seconden), tussenstand, animaties en geluidseffecten
+- Drie moeilijkheden (Normaal, Moeilijk, Meester) met kroontjes voor Meester-winst
+- Zet terugnemen, verdedigingskaart, interactieve tutorial
+- Automatisch opslaan: verder spelen waar je gebleven was
+- Nederlands en Engels
 
 ## Spelregels in het kort
 
@@ -45,7 +49,8 @@ www/                 het spel zelf (HTML, CSS, JavaScript)
   js/sprites.js      getekende kastelen, bomen en eenheden
   js/sfx.js          geluidseffecten
   js/store.js        verdienmodel: in-app aankopen en advertenties
-  js/main.js         schermen en bediening
+  js/main.js         schermen, bediening, tutorial en opslaan
+  js/i18n.js         alle teksten in het Nederlands en Engels
 docs/                verdienmodel, stappenplan App Store, privacybeleid
 tests/simulate.js    automatische test
 capacitor.config.json  instellingen om er een iOS/Android-app van te maken

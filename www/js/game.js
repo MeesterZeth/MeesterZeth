@@ -25,6 +25,13 @@ export const AI_COLORS = ['#e5484d', '#e2a400', '#8e4ec6'];
 
 export const PREMIUM_FROM_LEVEL = 11;
 
+// Moeilijkheid: hoe slim en hoe rijk is de computer?
+export const DIFFICULTIES = {
+  normal: { skill: 0, income: 1, gold: 0, undo: true },
+  hard:   { skill: 0.25, income: 1.15, gold: 10, undo: true },
+  master: { skill: 0.5, income: 1.3, gold: 20, undo: false },
+};
+
 // 30 levels, steeds groter en slimmer.
 export const LEVELS = Array.from({ length: 30 }, (_, i) => {
   const n = i + 1;
@@ -139,15 +146,17 @@ export function createGame(level, opts = {}) {
   };
 
   const playerCount = level.opponents + 1;
+  const diff = DIFFICULTIES[opts.difficulty] || DIFFICULTIES.normal;
+  state.difficulty = opts.difficulty in DIFFICULTIES ? opts.difficulty : 'normal';
   state.players.push({
-    id: 0, name: 'Jouw rijk', color: opts.color || '#2f7de1', human: true,
+    id: 0, name: 'Jouw rijk', nameKey: 'p.you', color: opts.color || '#2f7de1', human: true,
     gold: START_GOLD + (opts.bonusGold || 0), alive: true,
   });
   for (let i = 0; i < level.opponents; i++) {
     state.players.push({
-      id: i + 1, name: AI_NAMES[i], color: AI_COLORS[i], human: false,
-      gold: START_GOLD + level.aiGold, alive: true,
-      skill: level.aiSkill, incomeMult: level.aiIncome,
+      id: i + 1, name: AI_NAMES[i], nameKey: `ai.${i}`, color: AI_COLORS[i], human: false,
+      gold: START_GOLD + level.aiGold + diff.gold, alive: true,
+      skill: Math.min(1, level.aiSkill + diff.skill), incomeMult: level.aiIncome * diff.income,
     });
   }
 
@@ -266,7 +275,7 @@ export function startTurn(state, pid) {
       .sort((a, b) => UNITS[b.unit.type].upkeep - UNITS[a.unit.type].upkeep);
     if (!units.length) break;
     p.gold += UNITS[units[0].unit.type].upkeep;
-    events.push(`${UNITS[units[0].unit.type].name} is weggelopen: geen geld voor soldij!`);
+    events.push({ key: 'ev.deserted', params: { unit: units[0].unit.type } });
     units[0].unit = null;
   }
   p.gold = Math.max(0, p.gold);
@@ -310,14 +319,14 @@ export function reachable(state, fromKey) {
 export function whyNot(state, fromKey, toKey) {
   const from = state.tiles.get(fromKey), to = state.tiles.get(toKey);
   if (!from || !from.unit) return null;
-  if (from.unit.mp <= 0) return 'Deze eenheid heeft deze beurt al gelopen. Nieuwe eenheden lopen pas volgende beurt.';
-  if (!to || !isPassable(to)) return 'Over bergen en water kun je niet lopen.';
-  if (to.owner === from.owner && to.unit) return 'Daar staat al een eigen eenheid.';
+  if (from.unit.mp <= 0) return { key: 'why.tired' };
+  if (!to || !isPassable(to)) return { key: 'why.terrain' };
+  if (to.owner === from.owner && to.unit) return { key: 'why.occupied' };
   const str = UNITS[from.unit.type].str;
   if (to.owner !== from.owner && str <= defenseOf(to)) {
-    return `Te sterk: dit vakje heeft verdediging ${defenseOf(to)} en jouw ${UNITS[from.unit.type].name.toLowerCase()} heeft kracht ${str}. Je hebt meer kracht nodig.`;
+    return { key: 'why.strong', params: { def: defenseOf(to), unit: from.unit.type, str } };
   }
-  return `Te ver weg: deze eenheid heeft nog ${from.unit.mp} stap${from.unit.mp === 1 ? '' : 'pen'}. Vijandelijke vakjes en sterke vakjes onderweg blokkeren de weg.`;
+  return { key: 'why.far', params: { n: from.unit.mp } };
 }
 
 function pathTo(r, start, toKey) {
@@ -342,7 +351,7 @@ function eliminate(state, pid, by) {
     t.unit = null;
     if (t.building === 'tower') t.building = null;
   }
-  return `${p.name} is verslagen door ${state.players[by].name}!`;
+  return { key: 'ev.eliminated', params: { loser: pid, winner: by } };
 }
 
 // Geeft { ok, events } terug.
@@ -451,4 +460,33 @@ export function starsFor(state) {
   if (state.turn <= par) return 3;
   if (state.turn <= Math.round(par * 1.5)) return 2;
   return 1;
+}
+
+// ---------- Opslaan en laden ----------
+
+export function serialize(state) {
+  return JSON.stringify({
+    v: 1,
+    levelId: state.level.id,
+    difficulty: state.difficulty,
+    turn: state.turn, current: state.current, winner: state.winner, stats: state.stats,
+    players: state.players,
+    tiles: [...state.tiles.values()].map(t => [t.q, t.r, t.row, t.col, t.terrain, t.owner, t.building, t.unit]),
+  });
+}
+
+export function deserialize(json) {
+  const d = typeof json === 'string' ? JSON.parse(json) : json;
+  const level = LEVELS.find(l => l.id === d.levelId);
+  if (!level || d.v !== 1) return null;
+  const tiles = new Map();
+  for (const [q, r, row, col, terrain, owner, building, unit] of d.tiles) {
+    tiles.set(key(q, r), { q, r, row, col, terrain, owner, building, unit: unit ? { ...unit } : null });
+  }
+  return {
+    level, rows: level.rows, cols: level.cols, tiles,
+    players: d.players.map(p => ({ ...p })),
+    turn: d.turn, current: d.current, winner: d.winner, stats: { ...d.stats },
+    difficulty: d.difficulty || 'normal',
+  };
 }

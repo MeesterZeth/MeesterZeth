@@ -1,6 +1,6 @@
 // Tekent het speelveld: zee, 3D-eilandtegels, gebouwen, eenheden en effecten.
 import { toPixel, fromPixel, key, DIRS, mulberry32 } from './hex.js';
-import { UNITS } from './game.js';
+import { UNITS, defenseOf, isPassable } from './game.js';
 import * as S from './sprites.js';
 
 const COL = {
@@ -364,6 +364,41 @@ export class Renderer {
       ctx.setLineDash([s * 0.25, s * 0.15]); ctx.lineDashOffset = -t * 30;
       ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = Math.max(3, s * 0.13); ctx.stroke();
       ctx.setLineDash([]);
+    }
+
+    // Verdedigingskaart: getal op elk vakje
+    if (ui.defense) {
+      ctx.font = `${Math.round(s * 0.36)}px "Lilita One", sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      for (const tile of state.tiles.values()) {
+        if (!isPassable(tile)) continue;
+        const { x, y } = this.center(tile);
+        const d = defenseOf(tile);
+        const sx = x - s * 0.5, sy = y + s * 0.42, r = s * 0.22;
+        ctx.beginPath();
+        ctx.moveTo(sx - r, sy - r); ctx.lineTo(sx + r, sy - r); ctx.lineTo(sx + r, sy); ctx.quadraticCurveTo(sx + r, sy + r * 0.8, sx, sy + r * 1.3);
+        ctx.quadraticCurveTo(sx - r, sy + r * 0.8, sx - r, sy); ctx.closePath();
+        ctx.fillStyle = ['#2e7d32', '#f9a825', '#ef6c00', '#c62828'][d]; ctx.fill();
+        ctx.lineWidth = 1.5; ctx.strokeStyle = '#fff'; ctx.stroke();
+        ctx.fillStyle = '#fff'; ctx.fillText(String(d), sx, sy);
+      }
+    }
+
+    // Tutorial-aanwijzing: gouden ring en stuiterende pijl
+    if (ui.hint) {
+      for (const k of ui.hint) {
+        const tile = state.tiles.get(k);
+        if (!tile) continue;
+        const { x, y } = this.center(tile);
+        this.hexPath(ctx, x, y, s * (0.95 + 0.05 * pulse));
+        ctx.lineWidth = Math.max(3, s * 0.14); ctx.strokeStyle = `rgba(255,201,60,${0.6 + 0.4 * pulse})`; ctx.stroke();
+      }
+      if (ui.hint.length) {
+        const { x, y } = this.center(state.tiles.get(ui.hint[0]));
+        const by = y - s * 1.25 - Math.abs(Math.sin(t * 4)) * s * 0.3;
+        ctx.beginPath(); ctx.moveTo(x - s * 0.28, by); ctx.lineTo(x + s * 0.28, by); ctx.lineTo(x, by + s * 0.38); ctx.closePath();
+        ctx.fillStyle = '#ffc93c'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#4a3000'; ctx.stroke();
+      }
     }
 
     // Eenheden (van achter naar voor)

@@ -14,18 +14,21 @@
   <section id="screen-menu" class="screen active">
     <canvas id="menu-bg" aria-hidden="true"></canvas>
     <div class="menu-shade"></div>
+    <button class="lang-btn" id="btn-lang" aria-label="Language"></button>
     <div class="menu-wrap">
       <img src="icon.svg" alt="" class="logo">
       <h1 class="title">Eilandrijk</h1>
-      <p class="tagline">Verover het eiland, vakje voor vakje</p>
-      <button class="btn primary big play" id="btn-play"><span>Spelen</span><small id="play-sub">Level 1</small></button>
+      <p class="tagline" data-i18n="menu.tagline"></p>
+      <button class="btn green big play" id="btn-continue" hidden><span data-i18n="menu.continue"></span><small id="continue-sub"></small></button>
+      <button class="btn primary big play" id="btn-play"><span data-i18n="menu.play"></span><small id="play-sub"></small></button>
       <div class="row">
-        <button class="btn big" id="btn-levels">Levels</button>
-        <button class="btn big gold" id="btn-shop">Winkel</button>
+        <button class="btn big" id="btn-levels" data-i18n="menu.levels"></button>
+        <button class="btn big gold" id="btn-shop" data-i18n="menu.shop"></button>
       </div>
       <div class="row">
-        <button class="btn" id="btn-help">Uitleg</button>
-        <button class="btn" id="btn-settings">Instellingen</button>
+        <button class="btn" id="btn-tutorial" data-i18n="menu.tutorial"></button>
+        <button class="btn" id="btn-help" data-i18n="menu.help"></button>
+        <button class="btn" id="btn-settings" data-i18n="menu.settings"></button>
       </div>
       <p class="menu-stars" id="menu-stars"></p>
     </div>
@@ -35,7 +38,7 @@
   <section id="screen-levels" class="screen">
     <header class="bar">
       <button class="btn icon" data-back aria-label="Terug">‹</button>
-      <h2>Levels</h2>
+      <h2 data-i18n="levels.title"></h2>
       <span id="levels-stars" class="pill"></span>
     </header>
     <div id="level-grid" class="level-grid"></div>
@@ -47,12 +50,12 @@
       <div class="hud-top">
         <button class="btn icon" id="btn-pause" aria-label="Pauze"><span class="pause-icon"></span></button>
         <div class="chip"><i class="coin"></i><b id="hud-gold">0</b><small id="hud-net"></small></div>
-        <div class="chip turn-chip"><small>BEURT</small><b id="hud-turn">1</b></div>
+        <div class="chip turn-chip"><small data-i18n="hud.turn"></small><b id="hud-turn">1</b></div>
         <button class="btn icon" id="btn-sound" aria-label="Geluid"></button>
       </div>
       <div class="clocks">
         <div class="clock" id="clock-me">
-          <span class="dot" id="clock-me-dot"></span><span class="who">Jij</span>
+          <span class="dot" id="clock-me-dot"></span><span class="who" data-i18n="hud.you"></span>
           <b id="clock-me-time">1:00</b>
           <span class="clock-bar"><span id="clock-me-bar"></span></span>
         </div>
@@ -63,7 +66,7 @@
       </div>
       <button class="standings" id="btn-standings">
         <span class="share" id="share-bar"></span>
-        <span class="standings-label" id="standings-label">Tussenstand</span>
+        <span class="standings-label" id="standings-label"></span>
       </button>
     </header>
     <div class="board">
@@ -71,14 +74,24 @@
       <div id="toast" class="toast"></div>
       <div id="banner" class="banner"><span id="banner-text"></span></div>
       <div class="zoom">
-        <button class="btn icon" id="zoom-in" aria-label="Inzoomen">+</button>
-        <button class="btn icon" id="zoom-out" aria-label="Uitzoomen">−</button>
+        <button class="btn icon" id="zoom-in" aria-label="Zoom in">+</button>
+        <button class="btn icon" id="zoom-out" aria-label="Zoom out">−</button>
+        <button class="btn icon" id="btn-defense" aria-label="Defense map"><span class="shield-icon"></span></button>
+      </div>
+      <div class="coach" id="coach" hidden>
+        <div class="coach-text" id="coach-text"></div>
+        <div class="coach-foot"><small id="coach-step"></small>
+          <button class="btn" id="coach-skip" data-i18n="common.skip"></button>
+          <button class="btn gold" id="coach-next" data-i18n="common.next"></button></div>
       </div>
     </div>
     <footer class="panel">
       <div id="panel-info" class="panel-info"></div>
       <div id="panel-actions" class="panel-actions"></div>
-      <button class="btn primary end" id="btn-end">Einde beurt</button>
+      <div class="end-row">
+        <button class="btn icon undo" id="btn-undo" aria-label="Undo">↶</button>
+        <button class="btn primary end" id="btn-end"></button>
+      </div>
     </footer>
   </section>
 

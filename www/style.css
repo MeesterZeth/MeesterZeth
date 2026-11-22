@@ -1,4 +1,5 @@
 /* Eilandrijk – donkere speltafel met goudkleurige accenten.
+[hidden] { display: none !important; }
    Layout: menu over een levend eiland; in het spel een HUD boven, het bord in het midden, acties onder. */
 @font-face { font-family: 'Lilita One'; src: url('fonts/LilitaOne.woff2') format('woff2'); font-display: swap; }
 @font-face { font-family: 'Nunito'; src: url('fonts/Nunito.woff2') format('woff2'); font-weight: 400 900; font-display: swap; }
@@ -154,6 +155,35 @@ h1, h2, h3, .display { font-family: var(--display); font-weight: 400; letter-spa
 /* Zoomknoppen */
 .zoom { position: absolute; right: 10px; top: 10px; display: flex; flex-direction: column; gap: 8px; }
 .zoom .btn { width: 40px; height: 40px; font-size: 1.5rem; background: rgba(20,42,64,.85); }
+
+/* Taalknop, coach, schild */
+.lang-btn {
+  position: absolute; top: calc(12px + var(--safe-top)); right: max(16px, env(safe-area-inset-right, 0px)); z-index: 2;
+  border: 2px solid rgba(255,255,255,.35); background: rgba(13,27,42,.6); color: #fff; border-radius: 99px;
+  padding: 7px 14px; font-family: var(--display); font-size: 1rem; letter-spacing: 1px; cursor: pointer;
+}
+.lang-btn b { color: var(--gold); font-weight: 400; }
+.shield-icon { width: 18px; height: 21px; background: currentColor; clip-path: polygon(50% 0, 100% 15%, 92% 60%, 50% 100%, 8% 60%, 0 15%); }
+#btn-defense.on { background: var(--gold); color: #4a3000; }
+.coach {
+  position: absolute; left: 12px; right: 62px; top: 10px; background: rgba(255,248,230,.97); color: #1d2b3a;
+  border-radius: 16px; padding: 12px 14px; box-shadow: 0 10px 24px rgba(0,0,0,.4); display: flex; flex-direction: column; gap: 8px;
+  border: 3px solid var(--gold); animation: pop .3s cubic-bezier(.2,1.4,.5,1); z-index: 3;
+}
+.coach[hidden] { display: none; }
+.coach-text { font-weight: 700; line-height: 1.4; }
+.coach-text b { color: var(--blue-dark); }
+.coach-foot { display: flex; align-items: center; gap: 8px; }
+.coach-foot small { flex: 1; color: #6b7a8a; font-weight: 700; }
+.coach-foot .btn { padding: 7px 12px; font-size: .9rem; }
+.coach-foot .btn:not(.gold) { background: #e6dccb; color: #4b5563; box-shadow: 0 3px 0 #c9bca6; }
+.pulse-target { animation: pulseTarget 1s ease-in-out infinite; }
+@keyframes pulseTarget { 50% { box-shadow: 0 0 0 6px rgba(255,201,60,.6), 0 4px 0 var(--blue-dark); } }
+.end-row { display: flex; gap: 8px; }
+.end-row .end { flex: 1; }
+.btn.icon.undo { width: 54px; height: auto; font-size: 1.5rem; }
+.badge-crown { font-size: .7rem; color: #4a3000; background: var(--gold); border-radius: 99px; padding: 1px 6px; margin-top: 2px; font-family: var(--body); font-weight: 900; }
+.level.done .badge-crown { box-shadow: 0 1px 0 #7a5200; }
 
 /* Paneel onder */
 .panel { background: linear-gradient(#10233a, var(--panel)); padding: 10px 12px calc(10px + var(--safe-bottom)); border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; box-shadow: 0 -4px 14px rgba(0,0,0,.35); z-index: 2; }

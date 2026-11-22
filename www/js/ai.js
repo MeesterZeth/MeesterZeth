@@ -121,6 +121,11 @@ export function* aiTurn(state, pid, rng = Math.random) {
     const own = tilesOf(state, pid).filter(t => !t.unit && isPassable(t));
     const front = own.filter(t => isFrontier(state, pid, t));
     const spots = (front.length ? front : own).sort((a, b) => (field.get(a) ?? 99) - (field.get(b) ?? 99));
+    // Kasteel in gevaar en leeg? Dan eerst een sterke verdediger óp het kasteel.
+    if (capital && !capital.unit && threatAtHome >= 2) {
+      const type = P.gold >= 35 && net >= 4 ? 'knight' : P.gold >= 20 && net >= 2 ? 'soldier' : null;
+      if (type && recruit(state, pid, capital, type)) { net -= UNITS[type].upkeep; yield; continue; }
+    }
     if (!spots.length) break;
     let spot = spots[Math.min(spots.length - 1, Math.floor(rng() * 2 * (1 - skill)))];
     if (threatAtHome >= 2 && capital) {
