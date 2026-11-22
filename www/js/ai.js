@@ -83,7 +83,7 @@ export function* aiTurn(state, pid, rng = Math.random) {
       if (t === capital && enemyThreat(state, pid, t, 3) >= 2 && rng() < 0.4 + skill * 0.5) continue;
       const r = reachable(state, k(t));
       let best = null, bestS = -1;
-      for (const ak of r.attacks) {
+      for (const ak of r.attacks.keys()) {
         const s = targetScore(state, pid, state.tiles.get(ak)) + rng() * 3 * (1 - skill);
         if (s > bestS) { bestS = s; best = ak; }
       }

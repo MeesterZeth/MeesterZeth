@@ -36,8 +36,9 @@ export const LEVELS = Array.from({ length: 30 }, (_, i) => {
     cols: Math.min(9, 8 + Math.floor(n / 12)),
     opponents,
     aiGold: Math.min(14, Math.floor(n / 4) * 2),
-    aiIncome: 1 + n * 0.015,
-    aiSkill: Math.min(1, 0.45 + n * 0.02),
+    // Level 1-3 zijn oefenlevels met een zwakkere tegenstander.
+    aiIncome: n <= 3 ? 0.6 + n * 0.1 : 0.9 + n * 0.02,
+    aiSkill: n <= 3 ? 0.25 : Math.min(1, 0.3 + n * 0.03),
     par: 10 + opponents * 4 + Math.floor(n / 4),
     premium: n >= PREMIUM_FROM_LEVEL,
   };
@@ -251,7 +252,8 @@ export function startTurn(state, pid) {
 
 export function reachable(state, fromKey) {
   const start = state.tiles.get(fromKey);
-  const res = { moves: new Map(), attacks: new Set() };
+  // moves/attacks: vakje -> aantal stappen dat het kost
+  const res = { moves: new Map(), attacks: new Map() };
   if (!start || !start.unit || start.unit.mp <= 0) return res;
   const pid = start.owner;
   const u = start.unit;
@@ -271,7 +273,8 @@ export function reachable(state, fromKey) {
           if (!n.unit) res.moves.set(key(n.q, n.r), d + 1);
         }
       } else if (str > defenseOf(n)) {
-        res.attacks.add(key(n.q, n.r));
+        const k = key(n.q, n.r);
+        if (!res.attacks.has(k) || res.attacks.get(k) > d + 1) res.attacks.set(k, d + 1);
       }
     }
   }
@@ -309,7 +312,8 @@ export function moveUnit(state, fromKey, toKey) {
     if (prev === 0) state.stats.lost++;
     if (pid === 0) state.stats.captured++;
     to.unit = from.unit;
-    to.unit.mp = 0;
+    // Een leeg neutraal vakje innemen kost alleen de stappen; een vijand aanvallen kost alles.
+    to.unit.mp = prev < 0 && !wasCapital ? to.unit.mp - r.attacks.get(toKey) : 0;
     from.unit = null;
     if (to.building === 'tower') to.building = null;
     to.owner = pid;

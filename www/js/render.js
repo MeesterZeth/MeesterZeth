@@ -130,9 +130,15 @@ export class Renderer {
     }
     if (ui.attacks) {
       for (const k of ui.attacks) {
-        const { x, y } = this.center(state.tiles.get(k));
+        const t = state.tiles.get(k);
+        const { x, y } = this.center(t);
+        const neutral = t.owner < 0;
         this.hexPath(x, y, s * 0.8);
-        ctx.strokeStyle = '#ff3b30'; ctx.lineWidth = Math.max(2, s * 0.12); ctx.stroke();
+        ctx.fillStyle = neutral ? 'rgba(255,214,10,0.35)' : 'rgba(255,59,48,0.25)';
+        ctx.fill();
+        ctx.strokeStyle = neutral ? '#ffd60a' : '#ff3b30';
+        ctx.lineWidth = Math.max(2, s * 0.12); ctx.stroke();
+        if (!neutral) this.emoji('⚔️', x, y + s * 0.45, s * 0.35);
       }
     }
     if (ui.selected) {

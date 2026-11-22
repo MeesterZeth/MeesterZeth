@@ -1,4 +1,5 @@
 // Schermen, bediening en het aan elkaar knopen van regels, AI, tekenen en winkel.
+import { key } from './hex.js';
 import {
   LEVELS, UNITS, BUILDINGS, TOWER_COST, AD_BONUS_GOLD, createGame, reachable, moveUnit,
   recruit, build, canRecruit, canBuild, buildCost, economy, endTurn, defenseOf, starsFor,
@@ -83,7 +84,7 @@ function helpHtml() {
       <li>🎯 <b>Doel:</b> verover alle vijandelijke hoofdsteden 🏰. Verlies je eigen hoofdstad niet!</li>
       <li>💰 Elk vakje geeft 1 goud per beurt. Dorpen 🏠 en boerderijen 🌾 geven +2, je hoofdstad +3.</li>
       <li>🪖 Tik op een eigen leeg vakje om een eenheid te kopen. Nieuwe eenheden kunnen pas volgende beurt lopen.</li>
-      <li>👣 Tik op een eenheid met een groen stipje, daarna op een witte stip om te lopen of op een rood vakje om aan te vallen.</li>
+      <li>👣 Tik op een eenheid met een groen stipje. Daarna tik je op een <b>witte stip</b> om te lopen, op een <b>geel vakje</b> om een neutraal vakje in te nemen (kost 1 stap, je mag daarna verder) of op een <b>rood vakje</b> om een vijand aan te vallen (kost al je stappen).</li>
       <li>🛡️ Je verovert een vakje alleen als jouw kracht <b>groter</b> is dan de verdediging. Bos 🌲 geeft +1, een toren 🗼 verdedigt met 2. Maximaal 3.</li>
       <li>⚠️ Eenheden kosten elke beurt soldij. Heb je te weinig goud, dan lopen ze weg.</li>
     </ul>
@@ -248,9 +249,26 @@ function renderPanel() {
   const actions = $('#panel-actions');
   actions.innerHTML = '';
   if (!ui.selected) {
-    info.innerHTML = game.current === 0
-      ? 'Tik op een eigen vakje om te kopen of bouwen, of op een eenheid om te bewegen.'
-      : 'De tegenstanders zijn bezig…';
+    const ready = readyUnits();
+    info.innerHTML = game.current !== 0 ? 'De tegenstanders zijn bezig…'
+      : ready.length ? `Je hebt <b>${ready.length}</b> eenhe${ready.length === 1 ? 'id' : 'den'} die nog kan lopen (groen stipje).`
+      : 'Tik op een eigen vakje om een eenheid te kopen of iets te bouwen.';
+    if (game.current === 0 && !busy && ready.length) {
+      const b = document.createElement('button');
+      b.className = 'btn';
+      b.innerHTML = '<span>👣</span>Volgende eenheid';
+      b.onclick = selectNextUnit;
+      actions.appendChild(b);
+    }
+    return;
+  }
+  if (game.current === 0 && ui.moves && (ui.moves.length || ui.attacks.length)) {
+    info.innerHTML = '⚪ lopen · 🟨 neutraal vakje innemen (kost 1 stap) · 🟥 vijand aanvallen (kost alle stappen)';
+    const b = document.createElement('button');
+    b.className = 'btn';
+    b.innerHTML = '<span>👣</span>Volgende eenheid';
+    b.onclick = selectNextUnit;
+    actions.appendChild(b);
     return;
   }
   const t = game.tiles.get(ui.selected);
@@ -295,6 +313,31 @@ function renderPanel() {
   }
 }
 
+function readyUnits() {
+  return [...game.tiles.values()].filter(t => t.owner === 0 && t.unit && t.unit.mp > 0)
+    .filter(t => { const r = reachable(game, key(t.q, t.r)); return r.moves.size || r.attacks.size; });
+}
+
+function selectNextUnit() {
+  const ready = readyUnits();
+  if (!ready.length) { clearSelection(); refresh(); return; }
+  const i = ready.findIndex(t => key(t.q, t.r) === ui.selected);
+  const t = ready[(i + 1) % ready.length];
+  select(key(t.q, t.r));
+  refresh();
+}
+
+function capitalThreatened() {
+  const cap = [...game.tiles.values()].find(t => t.owner === 0 && t.building === 'capital');
+  if (!cap) return false;
+  for (const t of game.tiles.values()) {
+    if (!t.unit || t.owner <= 0) continue;
+    const d = (Math.abs(t.q - cap.q) + Math.abs(t.r - cap.r) + Math.abs(t.q + t.r - cap.q - cap.r)) / 2;
+    if (d <= 2 && UNITS[t.unit.type].str > defenseOf(cap)) return true;
+  }
+  return false;
+}
+
 function select(k) {
   const t = game.tiles.get(k);
   ui.selected = k;
@@ -302,7 +345,7 @@ function select(k) {
   if (t.owner === 0 && t.unit && t.unit.mp > 0) {
     const r = reachable(game, k);
     ui.moves = [...r.moves.keys()];
-    ui.attacks = [...r.attacks];
+    ui.attacks = [...r.attacks.keys()];
   }
 }
 
@@ -358,6 +401,10 @@ async function onEndTurn() {
   refresh();
   if (game.winner) return finish();
   events.forEach(toast);
+  if (capitalThreatened()) {
+    toast('⚠️ Je hoofdstad is in gevaar! Zet er een ridder op of naast.');
+    return;
+  }
   const idle = [...game.tiles.values()].filter(t => t.owner === 0 && t.unit && t.unit.mp > 0).length;
   if (!events.length) toast(`Beurt ${game.turn} · ${idle} eenhe${idle === 1 ? 'id' : 'den'} klaar`);
 }
