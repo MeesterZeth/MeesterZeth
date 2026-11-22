@@ -2,7 +2,7 @@
 import { key } from './hex.js';
 import {
   LEVELS, UNITS, BUILDINGS, TOWER_COST, AD_BONUS_GOLD, createGame, reachable, moveUnit,
-  recruit, build, canRecruit, canBuild, buildCost, economy, endTurn, defenseOf, starsFor, standings,
+  recruit, build, canRecruit, canBuild, buildCost, economy, endTurn, defenseOf, starsFor, standings, whyNot,
 } from './game.js';
 import { aiTurn } from './ai.js';
 import { Renderer } from './render.js';
@@ -113,7 +113,7 @@ function helpHtml() {
       <li><b>Doel:</b> verover alle vijandelijke kastelen. Verlies je eigen kasteel niet!</li>
       <li><b>Goud:</b> elk vakje geeft 1 goud per beurt. Dorpen en boerderijen +2, je kasteel +3.</li>
       <li><b>Kopen:</b> tik op een eigen vakje zonder eenheid. Nieuwe eenheden lopen pas volgende beurt.</li>
-      <li><b>Lopen:</b> tik op een eenheid met een groen stipje. Witte stip = lopen. Geel = leeg vakje innemen (kost 1 stap, daarna mag je door). Rood = vijand aanvallen (kost al je stappen).</li>
+      <li><b>Lopen:</b> tik op een eenheid met een groen stipje en daarna op een gemarkeerd vakje. Wit = lopen in je eigen land. Geel = lopen in neutraal land: elk vakje onderweg wordt van jou (1 stap per vakje). Rood = vijand aanvallen (kost al je stappen). Nieuwe eenheden lopen pas de beurt na het kopen.</li>
       <li><b>Winnen van een vakje:</b> je kracht (gele puntjes) moet <b>groter</b> zijn dan de verdediging. Bos +1, toren 2, kasteel 2. Nooit meer dan 3.</li>
       <li><b>Soldij:</b> eenheden kosten elke beurt goud. Is het op, dan lopen ze weg.</li>
       <li><b>Tijd:</b> je hebt per beurt beperkt de tijd (instelbaar). Bij 0 gaat je beurt automatisch voorbij.</li>
@@ -289,6 +289,12 @@ function attachEvents(g) {
         if (ev.prev >= 0 || ev.killed) sfx.battle(); else sfx.capture();
         if (ev.prev === 0 && navigator.vibrate) navigator.vibrate(30);
       }, 220 / speed);
+    } else if (ev.type === 'claim') {
+      setTimeout(() => {
+        renderer.burst(to, color, 8);
+        renderer.floatText(to, ev.building === 'village' ? '+3' : '+1', '#fff');
+        sfx.capture();
+      }, 120 / speed);
     } else if (ev.type === 'recruit') {
       renderer.burst(to, color, 8);
       sfx.coin();
@@ -520,6 +526,15 @@ function onTap(ev) {
       if (game.winner) finish();
       return;
     }
+  }
+  // Een eigen eenheid is geselecteerd en je tikt op een ander vakje: leg uit waarom het niet kan.
+  const sel = ui.selected && game.tiles.get(ui.selected);
+  if (sel && sel.owner === 0 && sel.unit && sel.unit.mp > 0 && t.owner !== 0) {
+    const why = whyNot(game, ui.selected, k);
+    if (why) { toast(why); sfx.enemy(); return; }
+  }
+  if (t.owner === 0 && t.unit && t.unit.mp <= 0 && ui.selected !== k) {
+    toast('Deze eenheid kan deze beurt niet meer lopen. Nieuwe eenheden lopen pas volgende beurt.');
   }
   if (ui.selected === k) clearSelection(); else { select(k); sfx.select(); }
   refresh();

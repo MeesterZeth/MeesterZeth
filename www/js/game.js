@@ -273,10 +273,11 @@ export function startTurn(state, pid) {
   return events;
 }
 
+// Waar kan deze eenheid heen? Lege neutrale vakjes mag je doorheen lopen: die worden onderweg van jou.
+// moves: eigen lege vakjes, attacks: neutrale of vijandelijke vakjes om in te nemen (vakje -> aantal stappen).
 export function reachable(state, fromKey) {
   const start = state.tiles.get(fromKey);
-  // moves/attacks: vakje -> aantal stappen dat het kost
-  const res = { moves: new Map(), attacks: new Map() };
+  const res = { moves: new Map(), attacks: new Map(), parent: new Map() };
   if (!start || !start.unit || start.unit.mp <= 0) return res;
   const pid = start.owner;
   const u = start.unit;
@@ -288,20 +289,48 @@ export function reachable(state, fromKey) {
     const d = dist.get(c);
     if (d + 1 > u.mp) continue;
     for (const n of tileNeighbors(state, c)) {
-      if (!isPassable(n)) continue;
+      if (!isPassable(n) || dist.has(n)) continue;
+      const k = key(n.q, n.r);
       if (n.owner === pid) {
-        if (!dist.has(n)) {
-          dist.set(n, d + 1);
-          queue.push(n);
-          if (!n.unit) res.moves.set(key(n.q, n.r), d + 1);
-        }
-      } else if (str > defenseOf(n)) {
-        const k = key(n.q, n.r);
-        if (!res.attacks.has(k) || res.attacks.get(k) > d + 1) res.attacks.set(k, d + 1);
+        dist.set(n, d + 1); res.parent.set(k, c); queue.push(n);
+        if (!n.unit) res.moves.set(k, d + 1);
+      } else if (n.owner < 0 && str > defenseOf(n)) {
+        dist.set(n, d + 1); res.parent.set(k, c); queue.push(n);
+        res.attacks.set(k, d + 1);
+      } else if (n.owner >= 0 && str > defenseOf(n) && !res.attacks.has(k)) {
+        res.parent.set(k, c);
+        res.attacks.set(k, d + 1);
       }
     }
   }
   return res;
+}
+
+// Waarom kan een eenheid niet naar dit vakje? Geeft een uitleg voor de speler.
+export function whyNot(state, fromKey, toKey) {
+  const from = state.tiles.get(fromKey), to = state.tiles.get(toKey);
+  if (!from || !from.unit) return null;
+  if (from.unit.mp <= 0) return 'Deze eenheid heeft deze beurt al gelopen. Nieuwe eenheden lopen pas volgende beurt.';
+  if (!to || !isPassable(to)) return 'Over bergen en water kun je niet lopen.';
+  if (to.owner === from.owner && to.unit) return 'Daar staat al een eigen eenheid.';
+  const str = UNITS[from.unit.type].str;
+  if (to.owner !== from.owner && str <= defenseOf(to)) {
+    return `Te sterk: dit vakje heeft verdediging ${defenseOf(to)} en jouw ${UNITS[from.unit.type].name.toLowerCase()} heeft kracht ${str}. Je hebt meer kracht nodig.`;
+  }
+  return `Te ver weg: deze eenheid heeft nog ${from.unit.mp} stap${from.unit.mp === 1 ? '' : 'pen'}. Vijandelijke vakjes en sterke vakjes onderweg blokkeren de weg.`;
+}
+
+function pathTo(r, start, toKey) {
+  const path = [];
+  let k = toKey;
+  while (k) {
+    const t = r.parent.get(k);
+    if (!t) break;
+    path.unshift(t);
+    k = key(t.q, t.r);
+    if (t === start) break;
+  }
+  return path.slice(1); // tussenliggende vakjes, zonder start
 }
 
 function eliminate(state, pid, by) {
@@ -324,6 +353,13 @@ export function moveUnit(state, fromKey, toKey) {
   const pid = from.owner;
   const events = [];
   if (r.moves.has(toKey)) {
+    for (const t of pathTo(r, from, toKey)) {
+      if (t.owner < 0) {
+        t.owner = pid;
+        if (pid === 0) state.stats.captured++;
+        emit(state, { type: 'claim', to: key(t.q, t.r), pid, building: t.building });
+      }
+    }
     to.unit = from.unit;
     to.unit.mp -= r.moves.get(toKey);
     from.unit = null;
@@ -331,6 +367,14 @@ export function moveUnit(state, fromKey, toKey) {
     return { ok: true, events, captured: false };
   }
   if (r.attacks.has(toKey)) {
+    // Lege neutrale vakjes onderweg worden ook van jou.
+    for (const t of pathTo(r, from, toKey)) {
+      if (t.owner < 0) {
+        t.owner = pid;
+        if (pid === 0) state.stats.captured++;
+        emit(state, { type: 'claim', to: key(t.q, t.r), pid, building: t.building });
+      }
+    }
     const prev = to.owner;
     const wasCapital = to.building === 'capital';
     const defenderUnit = to.unit ? to.unit.type : null;
