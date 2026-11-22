@@ -323,6 +323,10 @@ function startLevel(level, bonusGold) {
   const go = () => { showBanner('Jouw beurt', game.players[0].color); sfx.turn(); };
   if (!storage.load().seenHelp) openHelp(go); else go();
   if (bonusGold) toast(`+${bonusGold} startgoud!`);
+  else if (!storage.load().seenZoom) {
+    setTimeout(() => toast('Tip: knijp met twee vingers of gebruik + en − om in te zoomen.'), 1800);
+    storage.update(s => { s.seenZoom = true; });
+  }
 }
 
 let toastTimer = null;
@@ -482,6 +486,10 @@ function selectNextUnit() {
   const i = ready.findIndex(t => key(t.q, t.r) === ui.selected);
   const t = ready[(i + 1) % ready.length];
   select(key(t.q, t.r));
+  if (renderer.zoom > 1) { // ingezoomd: beeld naar de eenheid schuiven
+    const c = renderer.center(t);
+    renderer.panBy(renderer.w / 2 - c.x, renderer.h / 2 - c.y);
+  }
   sfx.select();
   refresh();
 }
@@ -508,9 +516,27 @@ function select(k) {
   }
 }
 
+// Welk vakje bedoelde de speler? Niet exact raken is ook goed.
+function smartPick(x, y) {
+  const exact = renderer.pick(x, y);
+  // 1. Is er een eenheid geselecteerd? Dan het dichtstbijzijnde doelvakje (of de eenheid zelf).
+  if (ui.selected && (ui.moves || ui.attacks)) {
+    const targets = [...(ui.moves || []), ...(ui.attacks || []), ui.selected];
+    if (targets.includes(exact)) return exact;
+    const near = renderer.pickNear(x, y, targets, game, 1.05);
+    if (near) return near;
+  }
+  // 2. Een eigen eenheid die nog kan lopen, vlakbij de vinger.
+  const ready = readyUnits().map(t => key(t.q, t.r));
+  if (ready.includes(exact)) return exact;
+  const near = renderer.pickNear(x, y, ready, game, 0.85);
+  if (near) return near;
+  return exact;
+}
+
 function onTap(ev) {
   if (!game || busy || game.current !== 0 || game.winner) return;
-  const k = renderer.pick(ev.clientX, ev.clientY);
+  const k = smartPick(ev.clientX, ev.clientY);
   const t = game.tiles.get(k);
   if (!t || t.terrain === 'water') { clearSelection(); refresh(); return; }
 
@@ -674,6 +700,62 @@ function loop(now) {
   requestAnimationFrame(loop);
 }
 
+// ---------- Vingers: tikken, slepen en knijpen ----------
+
+function setupGestures(canvas) {
+  const pts = new Map();
+  let start = null;   // gegevens bij begin van een gebaar
+  let moved = false;  // is er gesleept of gezoomd? Dan geen tik.
+  const local = e => { const r = canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+
+  canvas.addEventListener('pointerdown', e => {
+    canvas.setPointerCapture(e.pointerId);
+    pts.set(e.pointerId, local(e));
+    if (pts.size === 1) { moved = false; start = { ...local(e), last: local(e) }; }
+    if (pts.size === 2) {
+      const [a, b] = [...pts.values()];
+      start = { dist: Math.hypot(a.x - b.x, a.y - b.y), zoom: renderer.zoom, mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } };
+      moved = true;
+    }
+  });
+  canvas.addEventListener('pointermove', e => {
+    if (!pts.has(e.pointerId) || !start) return;
+    const p = local(e);
+    pts.set(e.pointerId, p);
+    if (pts.size >= 2 && start.dist) {
+      const [a, b] = [...pts.values()];
+      const dist = Math.hypot(a.x - b.x, a.y - b.y);
+      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      renderer.zoomAt(start.zoom * dist / start.dist, start.mid.x, start.mid.y);
+      renderer.panBy(mid.x - start.mid.x, mid.y - start.mid.y);
+      start.mid = mid;
+      start.zoom = renderer.zoom; start.dist = dist;
+    } else if (pts.size === 1 && start.last) {
+      if (Math.hypot(p.x - start.x, p.y - start.y) > 12) moved = true;
+      if (moved) renderer.panBy(p.x - start.last.x, p.y - start.last.y);
+      start.last = p;
+    }
+  });
+  const end = e => {
+    if (!pts.has(e.pointerId)) return;
+    pts.delete(e.pointerId);
+    if (pts.size === 0) {
+      if (!moved && e.type === 'pointerup') onTap(e);
+      start = null;
+    } else if (pts.size === 1) {
+      const p = [...pts.values()][0];
+      start = { x: p.x, y: p.y, last: p };
+    }
+  };
+  canvas.addEventListener('pointerup', end);
+  canvas.addEventListener('pointercancel', end);
+  canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    const p = local(e);
+    renderer.zoomAt(renderer.zoom * (e.deltaY < 0 ? 1.15 : 1 / 1.15), p.x, p.y);
+  }, { passive: false });
+}
+
 // ---------- Opstarten ----------
 
 function init() {
@@ -682,7 +764,17 @@ function init() {
   menuRenderer = new Renderer($('#menu-bg'));
   menuGame = createGame(LEVELS[17]);
   menuGame.current = -1;
-  $('#board').addEventListener('pointerup', onTap);
+  setupGestures($('#board'));
+  $('#zoom-in').onclick = () => {
+    // Inzoomen op de geselecteerde eenheid, of anders op je kasteel.
+    const focus = (ui.selected && game.tiles.get(ui.selected))
+      || [...game.tiles.values()].find(t => t.owner === 0 && t.building === 'capital');
+    const c = focus ? renderer.center(focus) : { x: renderer.w / 2, y: renderer.h / 2 };
+    renderer.zoomAt(renderer.zoom * 1.4, c.x, c.y);
+    renderer.panBy(renderer.w / 2 - c.x, renderer.h / 2 - c.y);
+    sfx.click();
+  };
+  $('#zoom-out').onclick = () => { renderer.zoomAt(renderer.zoom / 1.4, renderer.w / 2, renderer.h / 2); sfx.click(); };
   $('#btn-end').onclick = () => onEndTurn(false);
   $('#btn-pause').onclick = () => !busy && openPause();
   $('#btn-standings').onclick = () => { sfx.click(); openStandings(); };

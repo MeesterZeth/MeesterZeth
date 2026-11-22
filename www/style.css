@@ -151,6 +151,10 @@ h1, h2, h3, .display { font-family: var(--display); font-weight: 400; letter-spa
   100% { opacity: 0; transform: translateX(60%); }
 }
 
+/* Zoomknoppen */
+.zoom { position: absolute; right: 10px; top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.zoom .btn { width: 40px; height: 40px; font-size: 1.5rem; background: rgba(20,42,64,.85); }
+
 /* Paneel onder */
 .panel { background: linear-gradient(#10233a, var(--panel)); padding: 10px 12px calc(10px + var(--safe-bottom)); border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; box-shadow: 0 -4px 14px rgba(0,0,0,.35); z-index: 2; }
 .panel-info { font-size: .9rem; min-height: 1.3em; color: var(--muted); line-height: 1.35; }

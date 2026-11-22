@@ -46,12 +46,18 @@ export class Renderer {
     const bw = maxX - minX + Math.sqrt(3) + 0.5;
     const bh = maxY - minY + 2 + DEPTH + 0.6;
     const pad = 6;
-    this.size = Math.min((this.w - pad * 2) / bw, (this.h - pad * 2) / bh);
-    this.ox = this.w / 2 - ((minX + maxX) / 2) * this.size;
-    this.oy = this.h / 2 - ((minY + maxY) / 2 + DEPTH / 2) * this.size;
+    const size = Math.min((this.w - pad * 2) / bw, (this.h - pad * 2) / bh);
+    this.base = {
+      size,
+      ox: this.w / 2 - ((minX + maxX) / 2) * size,
+      oy: this.h / 2 - ((minY + maxY) / 2 + DEPTH / 2) * size,
+    };
+    this.state = state;
+    this.zoom = 1;
+    this.panX = 0;
+    this.panY = 0;
     this.sprites.clear();
-    this.dirty = true;
-    this.buildFoam(state);
+    this.applyView();
     const rng = mulberry32(7);
     this.waves = Array.from({ length: 34 }, () => ({
       x: rng() * this.w, y: rng() * this.h, len: 10 + rng() * 22, speed: 4 + rng() * 8, phase: rng() * 6,
@@ -59,6 +65,53 @@ export class Renderer {
   }
 
   markDirty() { this.dirty = true; }
+
+  // ---------- zoomen en schuiven ----------
+
+  applyView() {
+    const z = this.zoom;
+    // Niet verder schuiven dan de rand van het eiland.
+    this.panX = Math.min(0, Math.max(this.w - this.w * z, this.panX));
+    this.panY = Math.min(0, Math.max(this.h - this.h * z, this.panY));
+    this.size = this.base.size * z;
+    this.ox = this.base.ox * z + this.panX;
+    this.oy = this.base.oy * z + this.panY;
+    if (this.sprites.size > 120) this.sprites.clear();
+    this.dirty = true;
+    if (this.state) this.buildFoam(this.state);
+  }
+
+  // Zoom rond een punt op het scherm (bijv. tussen twee vingers).
+  zoomAt(newZoom, sx, sy) {
+    const z = Math.max(1, Math.min(2.6, newZoom));
+    const wx = (sx - this.panX) / this.zoom, wy = (sy - this.panY) / this.zoom;
+    this.zoom = z;
+    this.panX = sx - wx * z;
+    this.panY = sy - wy * z;
+    this.applyView();
+  }
+
+  panBy(dx, dy) {
+    if (this.zoom <= 1) return;
+    this.panX += dx;
+    this.panY += dy;
+    this.applyView();
+  }
+
+  // Vingervriendelijk: kies het dichtstbijzijnde vakje uit een lijst, binnen 'reach' tegelgroottes.
+  pickNear(clientX, clientY, keys, state, reach = 1) {
+    const rect = this.canvas.getBoundingClientRect();
+    const x = clientX - rect.left, y = clientY - rect.top;
+    let best = null, bestD = reach * this.size;
+    for (const k of keys) {
+      const t = state.tiles.get(k);
+      if (!t) continue;
+      const c = this.center(t);
+      const d = Math.hypot(c.x - x, c.y - y);
+      if (d < bestD) { bestD = d; best = k; }
+    }
+    return best;
+  }
 
   center(t) {
     const p = toPixel(t.q, t.r, this.size);
