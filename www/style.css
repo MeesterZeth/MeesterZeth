@@ -1,6 +1,6 @@
 /* Eilandrijk – donkere speltafel met goudkleurige accenten.
-[hidden] { display: none !important; }
    Layout: menu over een levend eiland; in het spel een HUD boven, het bord in het midden, acties onder. */
+[hidden] { display: none !important; }
 @font-face { font-family: 'Lilita One'; src: url('fonts/LilitaOne.woff2') format('woff2'); font-display: swap; }
 @font-face { font-family: 'Nunito'; src: url('fonts/Nunito.woff2') format('woff2'); font-weight: 400 900; font-display: swap; }
 
@@ -131,7 +131,7 @@ h1, h2, h3, .display { font-family: var(--display); font-weight: 400; letter-spa
 .standings-label b { color: var(--text); }
 
 /* Bord */
-.board { flex: 1; position: relative; min-height: 0; background: #0b3d5e; }
+.board { flex: 1; position: relative; min-height: 0; background: #0b3d5e; overflow: hidden; }
 #board { width: 100%; height: 100%; display: block; touch-action: none; }
 .toast {
   position: absolute; left: 50%; bottom: 14px; transform: translate(-50%, 10px); max-width: 92%;
@@ -184,6 +184,25 @@ h1, h2, h3, .display { font-family: var(--display); font-weight: 400; letter-spa
 .btn.icon.undo { width: 54px; height: auto; font-size: 1.5rem; }
 .badge-crown { font-size: .7rem; color: #4a3000; background: var(--gold); border-radius: 99px; padding: 1px 6px; margin-top: 2px; font-family: var(--body); font-weight: 900; }
 .level.done .badge-crown { box-shadow: 0 1px 0 #7a5200; }
+
+/* Prestaties */
+.pill-btn { border: 0; font: inherit; font-family: var(--display); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.trophy { width: 16px; height: 16px; background: var(--gold); display: inline-block; flex: none;
+  clip-path: polygon(10% 0, 90% 0, 90% 25%, 100% 25%, 100% 45%, 80% 55%, 62% 70%, 62% 85%, 78% 85%, 78% 100%, 22% 100%, 22% 85%, 38% 85%, 38% 70%, 20% 55%, 0 45%, 0 25%, 10% 25%); }
+.achv {
+  position: absolute; left: 50%; top: 12px; transform: translate(-50%, -140%); display: flex; align-items: center; gap: 10px;
+  background: linear-gradient(#ffe07a, var(--gold)); color: #4a3000; font-family: var(--display); padding: 10px 18px; border-radius: 16px;
+  box-shadow: 0 6px 0 var(--gold-dark), 0 12px 24px rgba(0,0,0,.4); white-space: nowrap; z-index: 4; pointer-events: none; max-width: 92%;
+  opacity: 0;
+}
+.achv .trophy { background: #4a3000; width: 20px; height: 20px; }
+.achv.show { animation: achv 3.2s cubic-bezier(.2,1.3,.5,1) forwards; }
+@keyframes achv { 0% { transform: translate(-50%, -140%); opacity: 0; } 12%, 85% { transform: translate(-50%, 0); opacity: 1; } 100% { transform: translate(-50%, -140%); opacity: 0; } }
+.ach { display: flex; gap: 12px; align-items: center; background: rgba(0,0,0,.22); border-radius: 14px; padding: 10px 12px; opacity: .55; }
+.ach.got { opacity: 1; border: 2px solid var(--gold); }
+.ach-icon { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: var(--panel-2); font-family: var(--display); font-size: 1.2rem; flex: none; }
+.ach.got .ach-icon { background: var(--gold); color: #4a3000; }
+.ach p { margin: 2px 0 0; font-size: .85rem; color: var(--muted); }
 
 /* Paneel onder */
 .panel { background: linear-gradient(#10233a, var(--panel)); padding: 10px 12px calc(10px + var(--safe-bottom)); border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; box-shadow: 0 -4px 14px rgba(0,0,0,.35); z-index: 2; }

@@ -1,6 +1,6 @@
 {
   "name": "eilandrijk",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "description": "Eilandrijk – een strategiespel op een eiland van zeshoeken.",
@@ -15,6 +15,7 @@
     "@capacitor-community/admob": "^8.4.2",
     "@capacitor/android": "^8.6.2",
     "@capacitor/core": "^8.6.2",
+    "@capacitor/haptics": "^8.0.0",
     "@capacitor/ios": "^8.6.2",
     "@revenuecat/purchases-capacitor": "^14.1.2"
   },

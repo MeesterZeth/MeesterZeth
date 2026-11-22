@@ -7,6 +7,11 @@ export function isEnabled() { return enabled; }
 
 function audio() {
   if (!enabled) return null;
+  return ctxGet();
+}
+
+// Muziek mag ook spelen als de geluidseffecten uit staan.
+function ctxGet() {
   if (!ctx) {
     const C = window.AudioContext || window.webkitAudioContext;
     if (!C) return null;
@@ -66,3 +71,87 @@ export const sfx = {
   win: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, { dur: 0.3, type: 'triangle', vol: 0.12, delay: i * 0.13 })),
   lose: () => [392, 330, 262].forEach((f, i) => tone(f, { dur: 0.35, type: 'triangle', vol: 0.1, delay: i * 0.2 })),
 };
+
+// ---------- Achtergrondmuziek: rustig, middeleeuws, zelf gegenereerd ----------
+// Akkoorden Am – F – C – G met een zachte "harp" erover. Alles wordt live gemaakt, geen bestanden.
+let musicOn = true;
+let musicTimer = null;
+let nextBeat = 0;
+let beat = 0;
+let musicGain = null;
+const BPM = 72;
+const CHORDS = [
+  [57, 60, 64], // Am
+  [53, 57, 60], // F
+  [48, 52, 55], // C
+  [55, 59, 62], // G
+];
+const MELODY = [0, 2, 1, 2, 0, 1, 2, 1]; // welke akkoordtoon per achtste noot
+const midi = n => 440 * Math.pow(2, (n - 69) / 12);
+
+export function setMusic(v) {
+  musicOn = v;
+  if (v) startMusic(); else stopMusic();
+}
+export function musicEnabled() { return musicOn; }
+
+export function startMusic() {
+  if (!musicOn || musicTimer) return;
+  const a = ctxGet();
+  if (!a) return;
+  if (!musicGain) {
+    musicGain = a.createGain();
+    musicGain.gain.value = 0.0001;
+    musicGain.connect(a.destination);
+  }
+  musicGain.gain.cancelScheduledValues(a.currentTime);
+  musicGain.gain.setTargetAtTime(0.55, a.currentTime, 1.5);
+  nextBeat = a.currentTime + 0.1;
+  musicTimer = setInterval(schedule, 120);
+}
+
+export function stopMusic() {
+  if (!musicTimer) return;
+  clearInterval(musicTimer);
+  musicTimer = null;
+  if (ctx && musicGain) musicGain.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.3);
+}
+
+function voice(freq, t0, dur, type, vol, filter) {
+  const a = ctx;
+  const osc = a.createOscillator();
+  const g = a.createGain();
+  const f = a.createBiquadFilter();
+  f.type = 'lowpass';
+  f.frequency.value = filter;
+  osc.type = type;
+  osc.frequency.value = freq;
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(vol, t0 + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  osc.connect(f).connect(g).connect(musicGain);
+  osc.start(t0);
+  osc.stop(t0 + dur + 0.05);
+}
+
+function schedule() {
+  if (!ctx) return;
+  const eighth = 60 / BPM / 2;
+  while (nextBeat < ctx.currentTime + 0.5) {
+    const bar = Math.floor(beat / 8) % CHORDS.length;
+    const chord = CHORDS[bar];
+    const step = beat % 8;
+    if (step === 0) {
+      // zachte strijkers-achtige laag
+      for (const n of chord) voice(midi(n - 12), nextBeat, eighth * 8.5, 'triangle', 0.035, 700);
+      voice(midi(chord[0] - 24), nextBeat, eighth * 8, 'sine', 0.06, 300);
+    }
+    // harp-melodie, af en toe een rust voor ademruimte
+    if (!(step === 7 && bar % 2 === 1)) {
+      const n = chord[MELODY[step]] + 12 + (step === 4 && bar === 3 ? 2 : 0);
+      voice(midi(n), nextBeat, eighth * 2.2, 'triangle', 0.045, 2200);
+    }
+    nextBeat += eighth;
+    beat++;
+  }
+}

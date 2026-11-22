@@ -25,10 +25,12 @@ Zet bij *Deployment Info* het scherm op **Portrait**.
 
 ## Stap 2 – Icoon en opstartscherm
 
-Maak een PNG van 1024×1024 van `www/icon.svg` en zet die als `assets/icon.png` neer. Draai daarna:
+Het icoon en het opstartscherm staan al klaar in de map `assets/`:
+`icon-only.png` (1024×1024), `splash.png` en `splash-dark.png` (2732×2732). Draai alleen nog:
 ```bash
-npx @capacitor/assets generate
+npx @capacitor/assets generate --ios
 ```
+Trillen werkt op de iPhone via de plugin `@capacitor/haptics`. Die wordt meegenomen door `npm install` en `npx cap sync`.
 
 ## Stap 3 – Producten aanmaken in App Store Connect
 
@@ -70,9 +72,9 @@ Nodig via TestFlight vrienden of medestudenten uit om te testen. Vraag ze om eer
 ## Stap 7 – Insturen
 
 Dit heb je nodig:
-- [ ] Screenshots van 6,9" en 6,5" iPhone-schermen
-- [ ] Een korte beschrijving en trefwoorden (bijvoorbeeld *strategie, hexagon, verovering, offline, puzzel*)
-- [ ] Een **privacybeleid-URL**. Gebruik de tekst in `docs/PRIVACYBELEID.md` en zet die online, bijvoorbeeld via GitHub Pages.
+- [ ] Screenshots: staan klaar in `store/screenshots/nl` en `store/screenshots/en`
+- [ ] Beschrijving, ondertitel en trefwoorden in het Nederlands en Engels: zie `docs/APP-STORE-TEKSTEN.md`
+- [ ] Een **privacybeleid-URL**. Gebruik de teksten in `docs/PRIVACYBELEID.md` en `docs/PRIVACY-POLICY-EN.md` en zet die online, bijvoorbeeld via GitHub Pages.
 - [ ] De **App Privacy**-vragenlijst. Door AdMob moet je aangeven: *Identifiers* en *Usage data* voor advertenties.
 - [ ] Leeftijdsclassificatie: waarschijnlijk **9+** (milde fantasy-strijd, geen bloed)
 - [ ] Een testaccount of uitleg voor de reviewer is niet nodig

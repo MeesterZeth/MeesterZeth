@@ -366,6 +366,21 @@ export class Renderer {
       ctx.setLineDash([]);
     }
 
+    // Vakjes die je tijdens de beurt van de tegenstander kwijtraakte
+    if (ui.lost) {
+      for (const k of ui.lost) {
+        const tile = state.tiles.get(k);
+        if (!tile) continue;
+        const { x, y } = this.center(tile);
+        this.hexPath(ctx, x, y, s * 0.86);
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(4, s * 0.2); ctx.globalAlpha = 0.5 + 0.5 * pulse; ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.setLineDash([s * 0.18, s * 0.12]);
+        ctx.strokeStyle = '#e0241b'; ctx.lineWidth = Math.max(2.5, s * 0.11); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
     // Verdedigingskaart: getal op elk vakje
     if (ui.defense) {
       ctx.font = `${Math.round(s * 0.36)}px "Lilita One", sans-serif`;

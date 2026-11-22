@@ -11,6 +11,7 @@ Verover vakje voor vakje het eiland, beheer je goud en versla de computertegenst
 - Zet terugnemen, verdedigingskaart, interactieve tutorial
 - Automatisch opslaan: verder spelen waar je gebleven was
 - Nederlands en Engels
+- 8 prestaties, achtergrondmuziek, trillen bij gevechten
 
 ## Spelregels in het kort
 
@@ -51,7 +52,9 @@ www/                 het spel zelf (HTML, CSS, JavaScript)
   js/store.js        verdienmodel: in-app aankopen en advertenties
   js/main.js         schermen, bediening, tutorial en opslaan
   js/i18n.js         alle teksten in het Nederlands en Engels
-docs/                verdienmodel, stappenplan App Store, privacybeleid
+docs/                verdienmodel, stappenplan, winkelteksten, privacybeleid (NL/EN)
+assets/              app-icoon en opstartscherm voor de App Store
+store/screenshots/   screenshots voor de App Store (NL en EN)
 tests/simulate.js    automatische test
 capacitor.config.json  instellingen om er een iOS/Android-app van te maken
 ```

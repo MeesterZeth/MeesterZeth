@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0d1b2a">
   <title>Eilandrijk</title>
-  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="icon" href="icon.png" type="image/png">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -16,7 +16,7 @@
     <div class="menu-shade"></div>
     <button class="lang-btn" id="btn-lang" aria-label="Language"></button>
     <div class="menu-wrap">
-      <img src="icon.svg" alt="" class="logo">
+      <img src="icon.png" alt="" class="logo">
       <h1 class="title">Eilandrijk</h1>
       <p class="tagline" data-i18n="menu.tagline"></p>
       <button class="btn green big play" id="btn-continue" hidden><span data-i18n="menu.continue"></span><small id="continue-sub"></small></button>
@@ -39,6 +39,7 @@
     <header class="bar">
       <button class="btn icon" data-back aria-label="Terug">‹</button>
       <h2 data-i18n="levels.title"></h2>
+      <button class="pill pill-btn" id="btn-achv" aria-label="Achievements"></button>
       <span id="levels-stars" class="pill"></span>
     </header>
     <div id="level-grid" class="level-grid"></div>
@@ -73,6 +74,7 @@
       <canvas id="board"></canvas>
       <div id="toast" class="toast"></div>
       <div id="banner" class="banner"><span id="banner-text"></span></div>
+      <div id="achv" class="achv"><span class="trophy"></span><span id="achv-text"></span></div>
       <div class="zoom">
         <button class="btn icon" id="zoom-in" aria-label="Zoom in">+</button>
         <button class="btn icon" id="zoom-out" aria-label="Zoom out">−</button>

@@ -8,13 +8,15 @@ import {
 import { aiTurn } from './ai.js';
 import { Renderer } from './render.js';
 import { iconURL } from './sprites.js';
-import { sfx, setEnabled as setSound, isEnabled as soundOn } from './sfx.js';
+import { sfx, setEnabled as setSound, isEnabled as soundOn, setMusic, startMusic, stopMusic } from './sfx.js';
+import * as ach from './achievements.js';
 import { t, lang, setLang, applyStatic } from './i18n.js';
 import * as storage from './storage.js';
 import * as store from './store.js';
 
 const $ = sel => document.querySelector(sel);
 const AI_DELAY = 340;
+const APP_VERSION = '1.0.0';
 
 let game = null;
 let renderer = null;
@@ -25,6 +27,7 @@ let busy = false;
 let speed = 1;
 let undoStack = [];
 let tut = null; // { step } tijdens de tutorial
+let lostThisRound = [];
 const clock = { left: 0, max: 0, lastTick: 0, opp: null, oppElapsed: 0, played: 0 };
 
 // ---------- Hulpjes ----------
@@ -41,11 +44,38 @@ const playerName = p => (p.human ? t('p.you') : t(p.nameKey || 'ai.0'));
 const settings = () => storage.load();
 const difficulty = () => (settings().difficulty in DIFFICULTIES ? settings().difficulty : 'normal');
 
+// Trillen: via de Capacitor-plugin op iPhone, anders via de browser.
+function buzz(heavy = false) {
+  const H = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics;
+  if (H && H.impact) H.impact({ style: heavy ? 'HEAVY' : 'LIGHT' }).catch(() => {});
+  else if (navigator.vibrate) navigator.vibrate(heavy ? 40 : 15);
+}
+
+function award(id) {
+  if (!ach.unlock(id)) return;
+  const el = $('#achv');
+  $('#achv-text').textContent = t('ach.unlocked', { name: t(`ach.${id}.name`) });
+  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  setTimeout(() => sfx.coin(), 200);
+}
+
+function openAchievements() {
+  const items = ach.ACHIEVEMENTS.map(id => {
+    const got = ach.has(id);
+    return `<div class="ach ${got ? 'got' : ''}"><span class="ach-icon">${got ? '★' : '?'}</span>
+      <div><b>${t(`ach.${id}.name`)}</b><p>${t(`ach.${id}.desc`)}</p></div></div>`;
+  }).join('');
+  modal(`<h2>${t('ach.title')}</h2><p style="text-align:center" class="small">${ach.count()} / ${ach.ACHIEVEMENTS.length}</p>${items}
+    <button class="btn primary big" data-close>${t('common.close')}</button>`,
+  box => box.querySelector('[data-close]').onclick = closeModal);
+}
+
 // Melding uit de spelregels ({ key, params }) omzetten naar tekst.
 function msg(ev) {
   if (!ev) return '';
   if (typeof ev === 'string') return ev;
   const p = { ...(ev.params || {}) };
+  if (ev.key === 'ev.eliminated' && game.players[p.winner].human) ev = { key: 'ev.youDefeated' };
   if (p.unit) p.unit = unitName(p.unit).toLowerCase();
   if (p.loser !== undefined) p.loser = playerName(game.players[p.loser]);
   if (p.winner !== undefined) p.winner = playerName(game.players[p.winner]);
@@ -94,6 +124,7 @@ function renderLevels() {
   grid.innerHTML = '';
   const st = settings();
   $('#levels-stars').textContent = `★ ${totalStars()}`;
+  $('#btn-achv').innerHTML = `<span class="trophy"></span>${ach.count()}/${ach.ACHIEVEMENTS.length}`;
   for (const lv of LEVELS) {
     const b = document.createElement('button');
     const unlocked = isUnlocked(lv);
@@ -206,16 +237,22 @@ function openSettings(fromGame = false) {
     ${seg('time', [[0, t('set.off')], [30, '30s'], [60, '60s'], [90, '90s']], s.turnTime)}
     <span class="setting-label">${t('set.sound')}</span>
     ${seg('sound', [['1', t('set.on')], ['0', t('set.off')]], s.sound ? '1' : '0')}
+    <span class="setting-label">${t('set.music')}</span>
+    ${seg('music', [['1', t('set.on')], ['0', t('set.off')]], s.music !== false ? '1' : '0')}
     ${fromGame ? '' : `<span class="setting-label">${t('set.color')}</span><div class="colors">${swatches}</div>
     ${hasPack ? '' : `<p class="small">${t('set.colorsHint')}</p>`}
     <button class="btn" data-reset>${t('set.reset')}</button>`}
-    <p class="small">${t('set.privacy')}</p>
+    <p class="small">${t('set.privacy')} ${t('set.version', { v: APP_VERSION })}</p>
     <button class="btn primary big" data-close>${t('common.done')}</button>`, box => {
     box.querySelectorAll('[data-lang]').forEach(b => b.onclick = () => {
       setLang(b.dataset.lang); sfx.click(); applyStatic(); if (game) refresh(); openSettings(fromGame);
     });
     box.querySelectorAll('[data-diff]').forEach(b => b.onclick = () => {
       storage.update(st => { st.difficulty = b.dataset.diff; }); sfx.click(); openSettings(fromGame);
+    });
+    box.querySelectorAll('[data-music]').forEach(b => b.onclick = () => {
+      storage.update(st => { st.music = b.dataset.music === '1'; });
+      setMusic(settings().music); sfx.click(); openSettings(fromGame);
     });
     box.querySelectorAll('[data-time]').forEach(b => b.onclick = () => {
       storage.update(st => { st.turnTime = Number(b.dataset.time); });
@@ -332,12 +369,14 @@ function attachEvents(g) {
       sfx.move();
     } else if (ev.type === 'capture') {
       renderer.animateMove(ev.from, ev.to, g, 260 / speed);
+      if (ev.prev === 0 && ev.pid !== 0) lostThisRound.push(ev.to);
+      if (ev.pid === 0 && ev.capital && to.unit && to.unit.type === 'catapult') award('siege');
       setTimeout(() => {
         renderer.burst(to, color, ev.prev >= 0 ? 22 : 10);
         const text = ev.capital ? '!!!' : ev.building === 'village' || ev.building === 'farm' ? '+3' : '+1';
         renderer.floatText(to, text, ev.capital ? '#ffd23f' : '#fff');
         if (ev.prev >= 0 || ev.killed) sfx.battle(); else sfx.capture();
-        if (ev.prev === 0 && navigator.vibrate) navigator.vibrate(30);
+        if (ev.prev === 0 || (ev.pid === 0 && ev.prev > 0)) buzz(ev.prev === 0 || ev.capital);
       }, 220 / speed);
     } else if (ev.type === 'claim') {
       setTimeout(() => {
@@ -351,6 +390,7 @@ function attachEvents(g) {
     } else if (ev.type === 'build') {
       renderer.burst(to, '#d9c39a', 12);
       sfx.build();
+      if (ev.pid === 0 && [...g.tiles.values()].filter(x => x.owner === 0 && x.building === 'farm').length >= 5) award('economist');
     }
     if (tut && ev.pid === 0) tutOnEvent(ev);
   };
@@ -742,6 +782,7 @@ async function onEndTurn(auto = false) {
   if (!auto) sfx.click();
   clearSelection();
   undoStack = [];
+  ui.lost = null;
   if (tut && tut.step === 6) $('#coach').hidden = true;
   const events = endTurn(game);
   renderer.markDirty();
@@ -751,6 +792,8 @@ async function onEndTurn(auto = false) {
 
 async function runOpponents(events) {
   busy = true;
+  lostThisRound = [];
+  ui.lost = null;
   refresh();
   while (game.current !== 0 && !game.winner) {
     const p = game.players[game.current];
@@ -782,6 +825,11 @@ async function runOpponents(events) {
   saveGame();
   if (tut && tut.step === 6) { tutSet(7); return; }
   events.forEach(e => toast(msg(e)));
+  const lost = [...new Set(lostThisRound)].filter(k => game.tiles.get(k).owner !== 0);
+  if (lost.length) {
+    ui.lost = lost;
+    toast(lost.length === 1 ? t('recap.lost1') : t('recap.lostN', { n: lost.length }));
+  }
   if (capitalThreatened()) { toast(t('toast.threat')); sfx.alarm(); }
 }
 
@@ -798,6 +846,12 @@ async function finish() {
     if (master) { s.crowns = s.crowns || {}; s.crowns[level.id] = true; }
   });
   if (won) {
+    award('first_win');
+    if (stars === 3) award('three_stars');
+    if (game.turn <= 10) award('blitz');
+    if (game.stats.lost === 0) award('untouchable');
+    if (master) award('master');
+    if (LEVELS.slice(0, 10).every(l => settings().stars[l.id])) award('ruler');
     sfx.win();
     const mine = [...game.tiles.values()].filter(x => x.owner === 0);
     for (let i = 0; i < 8; i++) setTimeout(() => renderer.burst(mine[Math.floor(Math.random() * mine.length)], game.players[0].color, 24), i * 150);
@@ -939,6 +993,9 @@ function setupGestures(canvas) {
 
 function init() {
   setSound(settings().sound);
+  setMusic(false);
+  const firstTouch = () => { setMusic(settings().music !== false); };
+  window.addEventListener('pointerdown', firstTouch, { once: true });
   applyStatic();
   renderer = new Renderer($('#board'));
   menuRenderer = new Renderer($('#menu-bg'));
@@ -976,6 +1033,7 @@ function init() {
     if (lv.id === 1 && !settings().seenTutorial) startLevel(LEVELS[0], 0, true);
     else openBriefing(lv);
   };
+  $('#btn-achv').onclick = () => { sfx.click(); openAchievements(); };
   $('#btn-tutorial').onclick = () => startLevel(LEVELS[0], 0, true);
   $('#btn-levels').onclick = () => { sfx.click(); show('screen-levels'); };
   $('#btn-shop').onclick = () => { sfx.click(); openShop(); };
@@ -988,6 +1046,7 @@ function init() {
   });
   // App naar de achtergrond (telefoon gaat, andere app): opslaan en pauzeren.
   document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopMusic(); else if (settings().music !== false) startMusic();
     if (!document.hidden || !game) return;
     saveGame();
     if (game.current === 0 && !busy && !game.winner && !modalOpen() && !tut) openPause();
