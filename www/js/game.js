@@ -197,6 +197,29 @@ export function createGame(level, opts = {}) {
 
 // ---------- Regels ----------
 
+// De UI kan meeluisteren (animaties, geluid) via state.onEvent.
+function emit(state, ev) {
+  if (state.onEvent) state.onEvent(ev);
+}
+
+// Tussenstand: per rijk vakjes, aandeel, leger en inkomen. Gesorteerd van sterk naar zwak.
+export function standings(state) {
+  const land = [...state.tiles.values()].filter(isPassable).length;
+  return state.players.map(p => {
+    const own = tilesOf(state, p.id);
+    const units = own.filter(t => t.unit);
+    return {
+      id: p.id, name: p.name, color: p.color, human: p.human, alive: p.alive, gold: p.gold,
+      tiles: own.length,
+      pct: land ? Math.round(own.length / land * 100) : 0,
+      units: units.length,
+      strength: units.reduce((a, t) => a + UNITS[t.unit.type].str, 0),
+      villages: own.filter(t => t.building === 'village' || t.building === 'capital').length,
+      income: p.alive ? economy(state, p.id).net : 0,
+    };
+  }).sort((a, b) => (b.alive - a.alive) || (b.tiles - a.tiles) || (b.strength - a.strength));
+}
+
 export function defenseOf(t) {
   let d = 0;
   if (t.unit) d = Math.max(d, UNITS[t.unit.type].str);
@@ -304,11 +327,13 @@ export function moveUnit(state, fromKey, toKey) {
     to.unit = from.unit;
     to.unit.mp -= r.moves.get(toKey);
     from.unit = null;
+    emit(state, { type: 'move', from: fromKey, to: toKey, pid });
     return { ok: true, events, captured: false };
   }
   if (r.attacks.has(toKey)) {
     const prev = to.owner;
     const wasCapital = to.building === 'capital';
+    const defenderUnit = to.unit ? to.unit.type : null;
     if (prev === 0) state.stats.lost++;
     if (pid === 0) state.stats.captured++;
     to.unit = from.unit;
@@ -316,11 +341,13 @@ export function moveUnit(state, fromKey, toKey) {
     to.unit.mp = prev < 0 && !wasCapital ? to.unit.mp - r.attacks.get(toKey) : 0;
     from.unit = null;
     if (to.building === 'tower') to.building = null;
+    const killed = defenderUnit;
     to.owner = pid;
     if (wasCapital && prev >= 0) {
       to.building = 'village';
       events.push(eliminate(state, prev, pid));
     }
+    emit(state, { type: 'capture', from: fromKey, to: toKey, pid, prev, killed, building: to.building, capital: wasCapital && prev >= 0 });
     checkWinner(state);
     return { ok: true, events, captured: true, prev };
   }
@@ -335,6 +362,7 @@ export function recruit(state, pid, t, type) {
   if (!canRecruit(state, pid, t, type)) return false;
   state.players[pid].gold -= UNITS[type].cost;
   t.unit = { type, mp: 0 };
+  emit(state, { type: 'recruit', to: key(t.q, t.r), pid, unit: type });
   return true;
 }
 
@@ -352,6 +380,7 @@ export function build(state, pid, t, type) {
   if (!canBuild(state, pid, t, type)) return false;
   state.players[pid].gold -= buildCost(state, pid, type);
   t.building = type;
+  emit(state, { type: 'build', to: key(t.q, t.r), pid, building: type });
   return true;
 }
 

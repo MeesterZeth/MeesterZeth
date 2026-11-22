@@ -1,23 +1,37 @@
-// Schermen, bediening en het aan elkaar knopen van regels, AI, tekenen en winkel.
+// Schermen, bediening, timer, tussenstand en het aan elkaar knopen van regels, AI, tekenen en winkel.
 import { key } from './hex.js';
 import {
   LEVELS, UNITS, BUILDINGS, TOWER_COST, AD_BONUS_GOLD, createGame, reachable, moveUnit,
-  recruit, build, canRecruit, canBuild, buildCost, economy, endTurn, defenseOf, starsFor,
+  recruit, build, canRecruit, canBuild, buildCost, economy, endTurn, defenseOf, starsFor, standings,
 } from './game.js';
 import { aiTurn } from './ai.js';
 import { Renderer } from './render.js';
+import { iconURL } from './sprites.js';
+import { sfx, setEnabled as setSound, isEnabled as soundOn } from './sfx.js';
 import * as storage from './storage.js';
 import * as store from './store.js';
 
 const $ = sel => document.querySelector(sel);
-const AI_DELAY = 260;
+const AI_DELAY = 340;
 
 let game = null;
 let renderer = null;
-let ui = { selected: null, moves: null, attacks: null, flash: null };
+let menuRenderer = null;
+let menuGame = null;
+let ui = { selected: null, moves: null, attacks: null };
 let busy = false;
+let speed = 1;
+const clock = { left: 0, max: 0, lastTick: 0, opp: null, oppElapsed: 0, played: 0 };
 
-// ---------- Schermen ----------
+// ---------- Hulpjes ----------
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const fmt = sec => {
+  const s = Math.max(0, Math.ceil(sec));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+};
+const coin = '<i class="coin"></i>';
+const modalOpen = () => !$('#modal').classList.contains('hidden');
 
 function show(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === id));
@@ -31,7 +45,10 @@ function totalStars() {
 
 function refreshMenu() {
   const s = totalStars();
-  $('#menu-stars').textContent = s ? `⭐ ${s} / ${LEVELS.length * 3} sterren verzameld` : '';
+  $('#menu-stars').textContent = s ? `★ ${s} / ${LEVELS.length * 3} sterren` : '';
+  const next = nextPlayableLevel();
+  $('#play-sub').textContent = `Level ${next.id}`;
+  if (menuRenderer) requestAnimationFrame(() => menuRenderer.fit(menuGame));
 }
 
 function isUnlocked(level) {
@@ -40,22 +57,33 @@ function isUnlocked(level) {
   return !!storage.load().stars[level.id - 1];
 }
 
+function nextPlayableLevel() {
+  return LEVELS.find(l => isUnlocked(l) && !storage.load().stars[l.id]) || LEVELS.filter(isUnlocked).pop() || LEVELS[0];
+}
+
+function starsRow(n) {
+  return `<span class="stars-row">${[0, 1, 2].map(i => `<span class="${i < n ? 'on' : ''}">★</span>`).join('')}</span>`;
+}
+
 function renderLevels() {
   const grid = $('#level-grid');
   grid.innerHTML = '';
   const stars = storage.load().stars;
-  $('#levels-stars').textContent = `⭐ ${totalStars()}`;
+  $('#levels-stars').textContent = `★ ${totalStars()}`;
   for (const lv of LEVELS) {
     const b = document.createElement('button');
     const unlocked = isUnlocked(lv);
     const needsPremium = lv.premium && !store.owns('premium');
-    b.className = 'level' + (unlocked ? '' : ' locked') + (needsPremium ? ' premium' : '');
     const st = stars[lv.id] || 0;
-    b.innerHTML = `${needsPremium ? '👑' : unlocked ? lv.id : '🔒'}<small>${needsPremium ? lv.id : '★'.repeat(st) + '☆'.repeat(3 - st)}</small>`;
+    b.className = 'level' + (needsPremium ? ' premium' : !unlocked ? ' locked' : st ? ' done' : '');
+    b.innerHTML = needsPremium ? `${lv.id}<span class="stars-row">PREMIUM</span>`
+      : unlocked ? `${lv.id}${starsRow(st)}` : `<span class="lock"></span>`;
+    b.setAttribute('aria-label', `Level ${lv.id}`);
     b.onclick = () => {
+      sfx.click();
       if (needsPremium) openShop('Level 11 t/m 30 horen bij Premium.');
       else if (unlocked) openBriefing(lv);
-      else toastModal('Nog op slot', `Haal eerst level ${lv.id - 1}.`);
+      else infoModal('Nog op slot', `Haal eerst level ${lv.id - 1}.`);
     };
     grid.appendChild(b);
   }
@@ -70,25 +98,28 @@ function modal(html, onMount) {
 }
 function closeModal() { $('#modal').classList.add('hidden'); }
 
-function toastModal(title, text) {
+function infoModal(title, text) {
   modal(`<h2>${title}</h2><p>${text}</p><button class="btn primary big" data-close>Oké</button>`,
     box => box.querySelector('[data-close]').onclick = closeModal);
 }
 
 function helpHtml() {
-  const rows = Object.values(UNITS).map(u =>
-    `<tr><td>${u.icon} ${u.name}</td><td>${u.str}</td><td>${u.cost}</td><td>${u.upkeep}</td><td>${u.move}</td></tr>`).join('');
+  const color = storage.load().color;
+  const rows = Object.entries(UNITS).map(([t, u]) =>
+    `<tr><td><img src="${iconURL('unit', t, color)}" alt=""> ${u.name}</td><td>${u.str}</td><td>${u.cost}</td><td>${u.upkeep}</td><td>${u.move}</td></tr>`).join('');
   return `
     <h2>Zo speel je</h2>
     <ul class="rules">
-      <li>🎯 <b>Doel:</b> verover alle vijandelijke hoofdsteden 🏰. Verlies je eigen hoofdstad niet!</li>
-      <li>💰 Elk vakje geeft 1 goud per beurt. Dorpen 🏠 en boerderijen 🌾 geven +2, je hoofdstad +3.</li>
-      <li>🪖 Tik op een eigen leeg vakje om een eenheid te kopen. Nieuwe eenheden kunnen pas volgende beurt lopen.</li>
-      <li>👣 Tik op een eenheid met een groen stipje. Daarna tik je op een <b>witte stip</b> om te lopen, op een <b>geel vakje</b> om een neutraal vakje in te nemen (kost 1 stap, je mag daarna verder) of op een <b>rood vakje</b> om een vijand aan te vallen (kost al je stappen).</li>
-      <li>🛡️ Je verovert een vakje alleen als jouw kracht <b>groter</b> is dan de verdediging. Bos 🌲 geeft +1, een toren 🗼 verdedigt met 2. Maximaal 3.</li>
-      <li>⚠️ Eenheden kosten elke beurt soldij. Heb je te weinig goud, dan lopen ze weg.</li>
+      <li><b>Doel:</b> verover alle vijandelijke kastelen. Verlies je eigen kasteel niet!</li>
+      <li><b>Goud:</b> elk vakje geeft 1 goud per beurt. Dorpen en boerderijen +2, je kasteel +3.</li>
+      <li><b>Kopen:</b> tik op een eigen vakje zonder eenheid. Nieuwe eenheden lopen pas volgende beurt.</li>
+      <li><b>Lopen:</b> tik op een eenheid met een groen stipje. Witte stip = lopen. Geel = leeg vakje innemen (kost 1 stap, daarna mag je door). Rood = vijand aanvallen (kost al je stappen).</li>
+      <li><b>Winnen van een vakje:</b> je kracht (gele puntjes) moet <b>groter</b> zijn dan de verdediging. Bos +1, toren 2, kasteel 2. Nooit meer dan 3.</li>
+      <li><b>Soldij:</b> eenheden kosten elke beurt goud. Is het op, dan lopen ze weg.</li>
+      <li><b>Tijd:</b> je hebt per beurt beperkt de tijd (instelbaar). Bij 0 gaat je beurt automatisch voorbij.</li>
+      <li><b>Tussenstand:</b> tik op de gekleurde balk bovenin.</li>
     </ul>
-    <table class="unit-table"><tr><th>Eenheid</th><th>Kracht</th><th>Prijs</th><th>Soldij</th><th>Stappen</th></tr>${rows}</table>
+    <div class="table-wrap"><table class="data-table"><tr><th>Eenheid</th><th>Kracht</th><th>Prijs</th><th>Soldij</th><th>Stappen</th></tr>${rows}</table></div>
     <button class="btn primary big" data-close>Begrepen!</button>`;
 }
 
@@ -100,23 +131,29 @@ function openHelp(after) {
   });
 }
 
+const PRODUCT_ICON = {
+  premium: () => iconURL('building', 'capital', '#ffc93c', 96),
+  colors: () => iconURL('unit', 'knight', '#e0569b', 96),
+};
+
 function openShop(reason) {
-  const testmode = store.isNative() ? '' : '<p class="testmode">🧪 Testmodus: aankopen worden alleen gesimuleerd.</p>';
+  const testmode = store.isNative() ? '' : '<p class="testmode">Testmodus: aankopen worden alleen nagespeeld, je betaalt niets.</p>';
   const items = Object.entries(store.PRODUCTS).map(([k, p]) => {
     const owned = store.owns(k);
     return `<div class="product ${owned ? 'owned' : ''}">
-      <span class="ico">${p.icon}</span>
-      <div><b>${p.title}</b><p>${p.desc}</p></div>
-      ${owned ? '<b>✓</b>' : `<button class="btn gold" data-buy="${k}">${p.price}</button>`}
+      <img src="${PRODUCT_ICON[k]()}" alt="">
+      <div><span class="display">${p.title}</span><p>${p.desc}</p></div>
+      ${owned ? '<span class="check">Gekocht</span>' : `<button class="btn gold" data-buy="${k}">${p.price}</button>`}
     </div>`;
   }).join('');
-  modal(`<h2>🛒 Winkel</h2>${reason ? `<p>${reason}</p>` : ''}${testmode}${items}
+  modal(`<h2>Winkel</h2>${reason ? `<p>${reason}</p>` : ''}${testmode}${items}
     <button class="btn big" data-restore>Aankopen herstellen</button>
     <button class="btn primary big" data-close>Sluiten</button>`, box => {
     box.querySelectorAll('[data-buy]').forEach(b => b.onclick = async () => {
       b.disabled = true;
       const ok = await store.purchase(b.dataset.buy);
-      openShop(ok ? 'Bedankt voor je aankoop! 🎉' : reason);
+      if (ok) sfx.win();
+      openShop(ok ? 'Bedankt voor je aankoop!' : reason);
       if ($('#screen-levels').classList.contains('active')) renderLevels();
     });
     box.querySelector('[data-restore]').onclick = async () => {
@@ -126,32 +163,47 @@ function openShop(reason) {
     box.querySelector('[data-close]').onclick = () => {
       closeModal();
       if ($('#screen-levels').classList.contains('active')) renderLevels();
+      refreshMenu();
     };
   });
 }
 
-function openSettings() {
+function openSettings(fromGame = false) {
   const s = storage.load();
   const hasPack = store.owns('colors');
   const swatches = store.COLORS.map(c => {
     const locked = c.pack && !hasPack;
     return `<button class="swatch ${s.color === c.value ? 'sel' : ''} ${locked ? 'locked' : ''}" style="background:${c.value}"
-      data-color="${c.value}" data-locked="${locked}" title="${c.name}"></button>`;
+      data-color="${c.value}" data-locked="${locked}" aria-label="${c.name}"></button>`;
   }).join('');
-  modal(`<h2>⚙️ Instellingen</h2>
-    <p><b>Kleur van jouw rijk</b></p><div class="colors">${swatches}</div>
-    ${hasPack ? '' : '<p class="small">🎨 Extra kleuren zitten in het Kleurenpakket.</p>'}
-    <button class="btn big" data-reset>Voortgang wissen</button>
+  const times = [[0, 'Uit'], [30, '30s'], [60, '60s'], [90, '90s']];
+  modal(`<h2>Instellingen</h2>
+    <span class="setting-label">Tijd per beurt</span>
+    <div class="seg">${times.map(([v, l]) => `<button data-time="${v}" class="${s.turnTime === v ? 'on' : ''}">${l}</button>`).join('')}</div>
+    <span class="setting-label">Geluid</span>
+    <div class="seg"><button data-sound="1" class="${s.sound ? 'on' : ''}">Aan</button><button data-sound="0" class="${s.sound ? '' : 'on'}">Uit</button></div>
+    ${fromGame ? '' : `<span class="setting-label">Kleur van jouw rijk</span><div class="colors">${swatches}</div>
+    ${hasPack ? '' : '<p class="small">Extra kleuren zitten in het Kleurenpakket.</p>'}
+    <button class="btn" data-reset>Voortgang wissen</button>`}
     <p class="small">Aankopen blijven bewaard. Eilandrijk verzamelt zelf geen persoonsgegevens.</p>
     <button class="btn primary big" data-close>Klaar</button>`, box => {
+    box.querySelectorAll('[data-time]').forEach(b => b.onclick = () => {
+      storage.update(st => { st.turnTime = Number(b.dataset.time); });
+      if (game && game.current === 0) resetClock();
+      sfx.click(); openSettings(fromGame);
+    });
+    box.querySelectorAll('[data-sound]').forEach(b => b.onclick = () => {
+      storage.update(st => { st.sound = b.dataset.sound === '1'; });
+      setSound(storage.load().sound); updateSoundBtn(); sfx.click(); openSettings(fromGame);
+    });
     box.querySelectorAll('[data-color]').forEach(b => b.onclick = () => {
       if (b.dataset.locked === 'true') return openShop('Ontgrendel 5 extra kleuren met het Kleurenpakket.');
       storage.update(st => { st.color = b.dataset.color; });
-      openSettings();
+      sfx.select(); openSettings(fromGame);
     });
     const reset = box.querySelector('[data-reset]');
-    reset.onclick = () => {
-      if (reset.dataset.armed) { storage.reset(); openSettings(); return; }
+    if (reset) reset.onclick = () => {
+      if (reset.dataset.armed) { storage.reset(); openSettings(fromGame); return; }
       reset.dataset.armed = '1';
       reset.textContent = 'Tik nog een keer om alle sterren te wissen';
     };
@@ -159,18 +211,19 @@ function openSettings() {
   });
 }
 
-// Gesimuleerde reclame in de browser (in de app komt hier een echte advertentie).
+// Nagespeelde reclame in de browser (in de app komt hier een echte advertentie).
 store.setMockAdUI((seconds, rewarded) => new Promise(resolve => {
   let left = seconds;
-  modal(`<div class="ad"><h2>Advertentie</h2><p class="testmode">🧪 Testmodus: hier komt in de app een echte advertentie.</p>
-    <div class="ad-box">📺 Reclame</div><button class="btn big" disabled data-skip>Nog ${left} s…</button></div>`, box => {
+  modal(`<h2>Advertentie</h2><p class="testmode">Testmodus: hier komt in de app een echte advertentie.</p>
+    <div class="ad-box">RECLAME</div><button class="btn big" disabled data-skip>Nog ${left} s…</button>`, box => {
     const btn = box.querySelector('[data-skip]');
     const timer = setInterval(() => {
       left--;
       if (left > 0) { btn.textContent = `Nog ${left} s…`; return; }
       clearInterval(timer);
       btn.disabled = false;
-      btn.textContent = rewarded ? 'Beloning ophalen 🎁' : 'Sluiten';
+      btn.textContent = rewarded ? 'Beloning ophalen' : 'Sluiten';
+      btn.className = 'btn gold big';
       btn.onclick = () => { closeModal(); resolve(true); };
     }, 1000);
   });
@@ -178,13 +231,13 @@ store.setMockAdUI((seconds, rewarded) => new Promise(resolve => {
 
 function openBriefing(level) {
   const premium = store.owns('premium');
-  const opp = level.opponents === 1 ? '1 tegenstander' : `${level.opponents} tegenstanders`;
+  const tt = storage.load().turnTime;
   modal(`<h2>Level ${level.id}</h2>
-    <p>${opp} · eiland van ${level.cols}×${level.rows}</p>
-    <p>⭐⭐⭐ als je wint binnen <b>${level.par}</b> beurten.</p>
-    ${premium ? `<p>👑 Premium-bonus: <b>+${AD_BONUS_GOLD} startgoud</b></p>` : ''}
+    <div class="statline"><span><b>${level.opponents}</b> ${level.opponents === 1 ? 'tegenstander' : 'tegenstanders'}</span><span><b>${tt ? tt + 's' : '∞'}</b> per beurt</span></div>
+    <p style="text-align:center">Win binnen <b>${level.par}</b> beurten voor 3 sterren.${level.id <= 3 ? ' Dit is een oefenlevel.' : ''}</p>
+    ${premium ? `<p class="testmode">Premium-bonus: +${AD_BONUS_GOLD} startgoud</p>` : ''}
     <button class="btn primary big" data-start>Start</button>
-    ${premium ? '' : `<button class="btn gold big" data-ad>🎬 Bekijk reclame: +${AD_BONUS_GOLD} startgoud</button>`}
+    ${premium ? '' : `<button class="btn gold big" data-ad>Bekijk reclame: +${AD_BONUS_GOLD} startgoud</button>`}
     <button class="btn big" data-close>Terug</button>`, box => {
     box.querySelector('[data-start]').onclick = () => startLevel(level, premium ? AD_BONUS_GOLD : 0);
     box.querySelector('[data-close]').onclick = closeModal;
@@ -196,22 +249,74 @@ function openBriefing(level) {
   });
 }
 
-// ---------- Spel ----------
+function openStandings() {
+  if (!game) return;
+  const rows = standings(game).map((p, i) => `
+    <tr class="${p.human ? 'me' : ''} ${p.alive ? '' : 'dead'}">
+      <td class="rank">${p.alive ? i + 1 : '–'}</td>
+      <td><span class="swatch-dot" style="background:${p.color}"></span>${p.human ? 'Jij' : p.name}</td>
+      <td>${p.tiles} <small class="small">(${p.pct}%)</small></td>
+      <td>${p.units} <small class="small">/ ${p.strength}</small></td>
+      <td>${p.income >= 0 ? '+' : ''}${p.income}</td>
+    </tr>`).join('');
+  const me = standings(game).findIndex(p => p.human) + 1;
+  modal(`<h2>Tussenstand</h2>
+    <p style="text-align:center">Beurt ${game.turn} · jij staat op plaats <b>${me}</b> van ${game.players.length}</p>
+    <div class="table-wrap"><table class="data-table">
+      <tr><th>#</th><th>Rijk</th><th>Vakjes</th><th>Leger / kracht</th><th>Goud/beurt</th></tr>${rows}
+    </table></div>
+    <button class="btn primary big" data-close>Verder spelen</button>`,
+  box => box.querySelector('[data-close]').onclick = closeModal);
+}
+
+// ---------- Spel starten ----------
+
+function attachEvents(g) {
+  g.onEvent = ev => {
+    if (!renderer) return;
+    renderer.markDirty();
+    const to = g.tiles.get(ev.to);
+    const color = g.players[ev.pid].color;
+    if (ev.type === 'move') {
+      renderer.animateMove(ev.from, ev.to, g, 240 / speed);
+      sfx.move();
+    } else if (ev.type === 'capture') {
+      renderer.animateMove(ev.from, ev.to, g, 260 / speed);
+      setTimeout(() => {
+        renderer.burst(to, color, ev.prev >= 0 ? 22 : 10);
+        const text = ev.capital ? 'VEROVERD!' : ev.building === 'village' ? '+3' : ev.building === 'farm' ? '+3' : '+1';
+        renderer.floatText(to, text, ev.capital ? '#ffd23f' : '#fff');
+        if (ev.prev >= 0 || ev.killed) sfx.battle(); else sfx.capture();
+        if (ev.prev === 0 && navigator.vibrate) navigator.vibrate(30);
+      }, 220 / speed);
+    } else if (ev.type === 'recruit') {
+      renderer.burst(to, color, 8);
+      sfx.coin();
+    } else if (ev.type === 'build') {
+      renderer.burst(to, '#d9c39a', 12);
+      sfx.build();
+    }
+  };
+}
 
 function startLevel(level, bonusGold) {
   closeModal();
+  sfx.click();
   game = createGame(level, { color: storage.load().color, bonusGold });
-  ui = { selected: null, moves: null, attacks: null, flash: null };
+  attachEvents(game);
+  ui = { selected: null, moves: null, attacks: null };
   busy = false;
+  speed = 1;
+  clock.played = 0;
+  clock.opp = game.players[1];
+  clock.oppElapsed = 0;
   show('screen-game');
   renderer.fit(game);
+  resetClock();
   refresh();
+  const go = () => { showBanner('Jouw beurt', game.players[0].color); sfx.turn(); };
+  if (!storage.load().seenHelp) openHelp(go); else go();
   if (bonusGold) toast(`+${bonusGold} startgoud!`);
-  if (!storage.load().seenHelp) openHelp();
-}
-
-function nextPlayableLevel() {
-  return LEVELS.find(l => isUnlocked(l) && !storage.load().stars[l.id]) || LEVELS.filter(isUnlocked).pop();
 }
 
 let toastTimer = null;
@@ -220,12 +325,32 @@ function toast(text) {
   el.textContent = text;
   el.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
 }
+
+function showBanner(text, color) {
+  const b = $('#banner');
+  $('#banner-text').textContent = text;
+  b.style.setProperty('--banner', color);
+  b.classList.remove('show');
+  void b.offsetWidth;
+  b.classList.add('show');
+}
+
+function resetClock() {
+  clock.max = storage.load().turnTime;
+  clock.left = clock.max;
+  clock.lastTick = 99;
+}
+
+function updateSoundBtn() {
+  $('#btn-sound').className = 'btn icon ' + (soundOn() ? 'sound-on' : 'sound-off');
+}
+
+// ---------- HUD en paneel ----------
 
 function refresh() {
   if (!game) return;
-  renderer.draw(game, ui);
   const me = game.players[0];
   const eco = economy(game, 0);
   $('#hud-gold').textContent = me.gold;
@@ -233,83 +358,110 @@ function refresh() {
   net.textContent = (eco.net >= 0 ? '+' : '') + eco.net;
   net.className = eco.net < 0 ? 'neg' : '';
   $('#hud-turn').textContent = game.turn;
-  $('#hud-players').innerHTML = game.players.map(p =>
-    `<span class="${p.alive ? '' : 'dead'} ${game.current === p.id ? 'now' : ''}" style="background:${p.color}" title="${p.name}"></span>`).join('');
-  $('#btn-end').disabled = busy || game.current !== 0;
-  $('#btn-end').textContent = game.current === 0 ? 'Einde beurt ➜' : `${game.players[game.current].name} is aan zet…`;
+
+  // Tussenstand-balk
+  const st = standings(game);
+  const byId = [...st].sort((a, b) => a.id - b.id);
+  $('#share-bar').innerHTML = byId.filter(p => p.alive).map(p =>
+    `<span style="width:${p.pct}%;background:${p.color}"></span>`).join('');
+  const rank = st.findIndex(p => p.human) + 1;
+  const mine = st.find(p => p.human);
+  $('#standings-label').innerHTML = `<span>Tussenstand · jij <b>#${rank}</b> met <b>${mine.pct}%</b> van het eiland</span><span>Bekijk ›</span>`;
+
+  $('#clock-me-dot').style.background = me.color;
+  const endBtn = $('#btn-end');
+  if (game.current === 0) {
+    endBtn.textContent = 'Einde beurt';
+    endBtn.className = 'btn primary end';
+    endBtn.disabled = busy;
+  } else {
+    endBtn.textContent = speed > 1 ? 'Snel ⏩  (tik voor normaal)' : 'Versnellen ⏩';
+    endBtn.className = 'btn end fast';
+    endBtn.disabled = false;
+  }
   renderPanel();
+}
+
+function updateClocks() {
+  if (!game) return;
+  const mineActive = game.current === 0 && !game.winner;
+  const me = $('#clock-me');
+  me.classList.toggle('active', mineActive);
+  const warn = mineActive && clock.max && clock.left <= 10;
+  me.classList.toggle('warn', !!warn);
+  $('#clock-me-time').textContent = clock.max ? fmt(clock.left) : '∞';
+  $('#clock-me-bar').style.width = clock.max ? `${(clock.left / clock.max) * 100}%` : '100%';
+  const opp = $('#clock-opp');
+  opp.classList.toggle('active', !mineActive && !game.winner);
+  if (clock.opp) {
+    $('#clock-opp-dot').style.background = clock.opp.color;
+    $('#clock-opp-name').textContent = clock.opp.name;
+  }
+  $('#clock-opp-time').textContent = fmt(clock.oppElapsed);
 }
 
 function clearSelection() {
   ui.selected = null; ui.moves = null; ui.attacks = null;
 }
 
+function card(html, enabled, fn, extra = '') {
+  const b = document.createElement('button');
+  b.className = 'card ' + extra;
+  b.innerHTML = html;
+  b.disabled = !enabled;
+  b.onclick = fn;
+  $('#panel-actions').appendChild(b);
+  return b;
+}
+
 function renderPanel() {
   const info = $('#panel-info');
-  const actions = $('#panel-actions');
-  actions.innerHTML = '';
-  if (!ui.selected) {
-    const ready = readyUnits();
-    info.innerHTML = game.current !== 0 ? 'De tegenstanders zijn bezig…'
-      : ready.length ? `Je hebt <b>${ready.length}</b> eenhe${ready.length === 1 ? 'id' : 'den'} die nog kan lopen (groen stipje).`
-      : 'Tik op een eigen vakje om een eenheid te kopen of iets te bouwen.';
-    if (game.current === 0 && !busy && ready.length) {
-      const b = document.createElement('button');
-      b.className = 'btn';
-      b.innerHTML = '<span>👣</span>Volgende eenheid';
-      b.onclick = selectNextUnit;
-      actions.appendChild(b);
-    }
+  $('#panel-actions').innerHTML = '';
+  if (game.current !== 0) {
+    info.innerHTML = `<b>${game.players[game.current].name}</b> is aan zet…`;
     return;
   }
-  if (game.current === 0 && ui.moves && (ui.moves.length || ui.attacks.length)) {
-    info.innerHTML = '⚪ lopen · 🟨 neutraal vakje innemen (kost 1 stap) · 🟥 vijand aanvallen (kost alle stappen)';
-    const b = document.createElement('button');
-    b.className = 'btn';
-    b.innerHTML = '<span>👣</span>Volgende eenheid';
-    b.onclick = selectNextUnit;
-    actions.appendChild(b);
+  if (!ui.selected) {
+    const ready = readyUnits();
+    info.innerHTML = ready.length
+      ? `Je hebt <b>${ready.length}</b> eenhe${ready.length === 1 ? 'id' : 'den'} die nog kan lopen.`
+      : 'Tik op een eigen vakje om een eenheid te kopen of iets te bouwen.';
+    if (!busy && ready.length) card('👣 Volgende eenheid', true, selectNextUnit, 'wide');
     return;
   }
   const t = game.tiles.get(ui.selected);
-  const ownerName = t.owner >= 0 ? game.players[t.owner].name : 'Niemand';
-  const terrain = { grass: 'Gras', forest: 'Bos', mountain: 'Berg' }[t.terrain];
-  let text = `<b>${ownerName}</b> · ${terrain}`;
-  if (t.building) text += ` · ${BUILDINGS[t.building].icon} ${BUILDINGS[t.building].name}`;
-  if (t.unit) text += ` · ${UNITS[t.unit.type].icon} ${UNITS[t.unit.type].name}`;
-  text += ` · 🛡️ ${defenseOf(t)}`;
-  if (t.owner === 0 && t.unit) {
-    text += t.unit.mp > 0 ? ` · nog ${t.unit.mp} stap(pen)` : ' · rust uit deze beurt';
+  if (t.owner === 0 && t.unit && ui.moves && (ui.moves.length || ui.attacks.length)) {
+    info.innerHTML = `<b>${UNITS[t.unit.type].name}</b> · nog ${t.unit.mp} stap${t.unit.mp === 1 ? '' : 'pen'}<br>
+      <span class="legend"><i style="background:#fff"></i>lopen</span>
+      <span class="legend"><i style="background:#ffd60a"></i>innemen</span>
+      <span class="legend"><i style="background:#ff3b30"></i>aanvallen</span>`;
+    card('👣 Volgende eenheid', true, selectNextUnit, 'wide');
+    return;
   }
+  const ownerName = t.owner >= 0 ? (t.owner === 0 ? 'Jouw rijk' : game.players[t.owner].name) : 'Niemand';
+  const terrain = { grass: 'gras', forest: 'bos', mountain: 'berg' }[t.terrain];
+  let text = `<b>${ownerName}</b> · ${terrain}`;
+  if (t.building) text += ` · ${BUILDINGS[t.building].name.toLowerCase()}`;
+  if (t.unit) text += ` · ${UNITS[t.unit.type].name.toLowerCase()}`;
+  text += ` · verdediging <b>${defenseOf(t)}</b>`;
+  if (t.owner === 0 && t.unit && t.unit.mp <= 0) text += ' · rust uit';
   info.innerHTML = text;
-  if (t.owner !== 0 || game.current !== 0 || busy) return;
+  if (t.owner !== 0 || busy) return;
 
-  const add = (label, icon, cost, enabled, fn) => {
-    const b = document.createElement('button');
-    b.className = 'btn';
-    b.innerHTML = `<span>${icon}</span>${label}<br>💰${cost}`;
-    b.disabled = !enabled;
-    b.onclick = fn;
-    actions.appendChild(b);
-  };
+  const color = game.players[0].color;
   if (!t.unit) {
     for (const [type, u] of Object.entries(UNITS)) {
-      add(u.name, u.icon, u.cost, canRecruit(game, 0, t, type), () => {
-        recruit(game, 0, t, type);
-        clearSelection();
-        refresh();
-      });
+      card(`<img src="${iconURL('unit', type, color)}" alt="">${u.name}<span class="cost">${coin}${u.cost}</span>`,
+        canRecruit(game, 0, t, type), () => { recruit(game, 0, t, type); clearSelection(); refresh(); });
     }
   }
   if (!t.building) {
     if (t.terrain === 'grass') {
-      add('Boerderij', '🌾', buildCost(game, 0, 'farm'), canBuild(game, 0, t, 'farm'), () => {
-        build(game, 0, t, 'farm'); clearSelection(); refresh();
-      });
+      card(`<img src="${iconURL('building', 'farm', color)}" alt="">Boerderij<span class="cost">${coin}${buildCost(game, 0, 'farm')}</span>`,
+        canBuild(game, 0, t, 'farm'), () => { build(game, 0, t, 'farm'); clearSelection(); refresh(); });
     }
-    add('Toren', '🗼', TOWER_COST, canBuild(game, 0, t, 'tower'), () => {
-      build(game, 0, t, 'tower'); clearSelection(); refresh();
-    });
+    card(`<img src="${iconURL('building', 'tower', color)}" alt="">Toren<span class="cost">${coin}${TOWER_COST}</span>`,
+      canBuild(game, 0, t, 'tower'), () => { build(game, 0, t, 'tower'); clearSelection(); refresh(); });
   }
 }
 
@@ -324,6 +476,7 @@ function selectNextUnit() {
   const i = ready.findIndex(t => key(t.q, t.r) === ui.selected);
   const t = ready[(i + 1) % ready.length];
   select(key(t.q, t.r));
+  sfx.select();
   refresh();
 }
 
@@ -361,52 +514,64 @@ function onTap(ev) {
     const res = moveUnit(game, ui.selected, k);
     if (res.ok) {
       res.events.forEach(toast);
-      if (isAttack) flash(k);
       const u = game.tiles.get(k).unit;
       if (u && u.mp > 0) select(k); else clearSelection();
       refresh();
-      if (game.winner) return finish();
+      if (game.winner) finish();
       return;
     }
   }
-  if (ui.selected === k) clearSelection(); else select(k);
+  if (ui.selected === k) clearSelection(); else { select(k); sfx.select(); }
   refresh();
 }
 
-function flash(k) {
-  ui.flash = k;
-  setTimeout(() => { ui.flash = null; refresh(); }, 180);
-}
+// ---------- Beurten ----------
 
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-
-async function onEndTurn() {
-  if (!game || busy || game.current !== 0) return;
+async function onEndTurn(auto = false) {
+  if (!game) return;
+  if (game.current !== 0) { // tijdens de beurt van de computer: versnellen
+    speed = speed > 1 ? 1 : 3;
+    refresh();
+    return;
+  }
+  if (busy) return;
   busy = true;
+  if (!auto) sfx.click();
   clearSelection();
   let events = endTurn(game);
+  renderer.markDirty();
   refresh();
   while (game.current !== 0 && !game.winner) {
-    const pid = game.current;
-    for (const _ of aiTurn(game, pid)) {
+    const p = game.players[game.current];
+    clock.opp = p;
+    clock.oppElapsed = 0;
+    showBanner(p.name, p.color);
+    sfx.enemy();
+    refresh();
+    await sleep(700 / speed);
+    for (const _ of aiTurn(game, game.current)) {
       refresh();
-      await sleep(AI_DELAY);
+      await sleep(AI_DELAY / speed);
       if (game.winner) break;
     }
     if (game.winner) break;
+    await sleep(250 / speed);
     events = endTurn(game);
+    renderer.markDirty();
     refresh();
   }
   busy = false;
+  speed = 1;
+  resetClock();
   refresh();
   if (game.winner) return finish();
+  showBanner('Jouw beurt', game.players[0].color);
+  sfx.turn();
   events.forEach(toast);
   if (capitalThreatened()) {
-    toast('⚠️ Je hoofdstad is in gevaar! Zet er een ridder op of naast.');
-    return;
+    toast('Let op: je kasteel is in gevaar! Zet er een ridder op of naast.');
+    sfx.alarm();
   }
-  const idle = [...game.tiles.values()].filter(t => t.owner === 0 && t.unit && t.unit.mp > 0).length;
-  if (!events.length) toast(`Beurt ${game.turn} · ${idle} eenhe${idle === 1 ? 'id' : 'den'} klaar`);
 }
 
 async function finish() {
@@ -417,57 +582,115 @@ async function finish() {
     s.levelsPlayed++;
     if (won) s.stars[level.id] = Math.max(s.stars[level.id] || 0, stars);
   });
-  await sleep(500);
+  if (won) {
+    sfx.win();
+    const mine = [...game.tiles.values()].filter(t => t.owner === 0);
+    for (let i = 0; i < 8; i++) setTimeout(() => renderer.burst(mine[Math.floor(Math.random() * mine.length)], game.players[0].color, 24), i * 150);
+  } else sfx.lose();
+  await sleep(1300);
   await store.maybeShowInterstitial();
   const next = LEVELS[level.id];
   const nextLocked = next && next.premium && !store.owns('premium');
+  const starHtml = `<div class="stars">${[0, 1, 2].map(i => `<span class="star ${i < stars ? 'on' : ''}"></span>`).join('')}</div>`;
+  const stats = `<div class="statline"><span><b>${game.turn}</b> beurten</span><span><b>${fmt(clock.played)}</b> speeltijd</span><span><b>${game.stats.captured}</b> veroverd</span></div>`;
   modal(won
-    ? `<h2>🎉 Gewonnen!</h2><div class="stars">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>
-       <p>Level ${level.id} veroverd in ${game.turn} beurten (⭐⭐⭐ binnen ${level.par}).</p>
-       ${next ? `<button class="btn primary big" data-next>${nextLocked ? '👑 Ga verder met Premium' : `Volgende: level ${next.id}`}</button>` : '<p><b>Je hebt alle levels uitgespeeld!</b></p>'}
+    ? `<h2>Gewonnen!</h2>${starHtml}${stats}
+       <p style="text-align:center" class="small">3 sterren als je wint binnen ${level.par} beurten.</p>
+       ${next ? `<button class="btn green big" data-next>${nextLocked ? 'Verder met Premium' : `Volgende: level ${next.id}`}</button>` : '<p><b>Je hebt alle levels uitgespeeld!</b></p>'}
        <button class="btn big" data-retry>Opnieuw voor meer sterren</button>
        <button class="btn big" data-menu>Menu</button>`
-    : `<h2>💥 Verloren</h2><p>Je hoofdstad is gevallen in beurt ${game.turn}.</p>
-       <p class="small">Tip: zet een toren of sterke eenheid naast je hoofdstad en bouw boerderijen voor extra goud.</p>
+    : `<h2>Verloren</h2>${starHtml}${stats}
+       <p class="small">Tip: zet een ridder op of naast je kasteel, en bouw boerderijen voor extra goud.</p>
        <button class="btn primary big" data-retry>Probeer opnieuw</button>
        <button class="btn big" data-menu>Menu</button>`,
   box => {
     const nb = box.querySelector('[data-next]');
     if (nb) nb.onclick = () => (nextLocked ? openShop('Speel level 11 t/m 30 met Premium.') : openBriefing(next));
     box.querySelector('[data-retry]').onclick = () => openBriefing(level);
-    box.querySelector('[data-menu]').onclick = () => { closeModal(); show('screen-menu'); };
+    box.querySelector('[data-menu]').onclick = () => { closeModal(); game = null; show('screen-menu'); };
   });
 }
 
 function openPause() {
+  sfx.click();
   modal(`<h2>Pauze</h2>
     <button class="btn primary big" data-close>Verder spelen</button>
-    <button class="btn big" data-help>❓ Uitleg</button>
+    <button class="btn big" data-standings>Tussenstand</button>
+    <button class="btn big" data-help>Uitleg</button>
+    <button class="btn big" data-settings>Tijd en geluid</button>
     <button class="btn big" data-retry>Level opnieuw</button>
     <button class="btn big" data-menu>Stoppen</button>`, box => {
     box.querySelector('[data-close]').onclick = closeModal;
+    box.querySelector('[data-standings]').onclick = openStandings;
     box.querySelector('[data-help]').onclick = () => openHelp();
+    box.querySelector('[data-settings]').onclick = () => openSettings(true);
     box.querySelector('[data-retry]').onclick = () => openBriefing(game.level);
     box.querySelector('[data-menu]').onclick = () => { closeModal(); game = null; show('screen-menu'); };
   });
 }
 
+// ---------- Hoofdlus: tekenen en klok ----------
+
+let last = performance.now();
+let lastClockUi = 0;
+function loop(now) {
+  const dt = Math.min(0.1, (now - last) / 1000);
+  last = now;
+  const inGame = game && $('#screen-game').classList.contains('active');
+  if (inGame) {
+    const running = !game.winner && !modalOpen() && !document.hidden;
+    if (running) clock.played += dt;
+    if (running && game.current === 0 && !busy && clock.max) {
+      clock.left -= dt;
+      const sec = Math.ceil(clock.left);
+      if (sec <= 10 && sec < clock.lastTick && sec > 0) { clock.lastTick = sec; sfx.tick(); }
+      if (clock.left <= 0) {
+        clock.left = 0;
+        toast('De tijd is om! Je beurt is voorbij.');
+        onEndTurn(true);
+      }
+    }
+    if (running && game.current !== 0) clock.oppElapsed += dt;
+    renderer.draw(game, ui, now);
+    if (now - lastClockUi > 100) { updateClocks(); lastClockUi = now; }
+  } else if ($('#screen-menu').classList.contains('active') && menuRenderer) {
+    menuRenderer.draw(menuGame, {}, now);
+  }
+  requestAnimationFrame(loop);
+}
+
 // ---------- Opstarten ----------
 
 function init() {
+  setSound(storage.load().sound);
   renderer = new Renderer($('#board'));
+  menuRenderer = new Renderer($('#menu-bg'));
+  menuGame = createGame(LEVELS[17]);
+  menuGame.current = -1;
   $('#board').addEventListener('pointerup', onTap);
-  $('#btn-end').onclick = onEndTurn;
+  $('#btn-end').onclick = () => onEndTurn(false);
   $('#btn-pause').onclick = () => !busy && openPause();
-  $('#btn-play').onclick = () => openBriefing(nextPlayableLevel());
-  $('#btn-levels').onclick = () => show('screen-levels');
-  $('#btn-shop').onclick = () => openShop();
-  $('#btn-help').onclick = () => openHelp();
-  $('#btn-settings').onclick = openSettings;
-  document.querySelectorAll('[data-back]').forEach(b => b.onclick = () => show('screen-menu'));
-  window.addEventListener('resize', () => { if (game) { renderer.fit(game); refresh(); } });
+  $('#btn-standings').onclick = () => { sfx.click(); openStandings(); };
+  $('#btn-sound').onclick = () => {
+    storage.update(s => { s.sound = !s.sound; });
+    setSound(storage.load().sound); updateSoundBtn(); sfx.click();
+  };
+  $('#btn-play').onclick = () => { sfx.click(); openBriefing(nextPlayableLevel()); };
+  $('#btn-levels').onclick = () => { sfx.click(); show('screen-levels'); };
+  $('#btn-shop').onclick = () => { sfx.click(); openShop(); };
+  $('#btn-help').onclick = () => { sfx.click(); openHelp(); };
+  $('#btn-settings').onclick = () => { sfx.click(); openSettings(); };
+  document.querySelectorAll('[data-back]').forEach(b => b.onclick = () => { sfx.click(); show('screen-menu'); });
+  window.addEventListener('resize', () => {
+    if (game) { renderer.fit(game); refresh(); }
+    menuRenderer.fit(menuGame);
+  });
+  updateSoundBtn();
   store.init().finally(refreshMenu);
   refreshMenu();
+  menuRenderer.fit(menuGame);
+  if (document.fonts) document.fonts.ready.then(() => { renderer.markDirty(); });
+  requestAnimationFrame(loop);
 }
 
 init();

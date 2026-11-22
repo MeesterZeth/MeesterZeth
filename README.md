@@ -6,6 +6,7 @@ Verover vakje voor vakje het eiland, beheer je goud en versla de computertegenst
 - **30 levels**: 1 t/m 10 gratis, 11 t/m 30 met Premium
 - Korte potjes van 5 tot 15 minuten, goed te spelen met één hand
 - Werkt zonder internet
+- Beurttimer (uit, 30, 60 of 90 seconden), tussenstand, animaties en geluidseffecten
 
 ## Spelregels in het kort
 
@@ -40,7 +41,9 @@ npm test             # laat de computer alle 30 levels tegen zichzelf spelen
 www/                 het spel zelf (HTML, CSS, JavaScript)
   js/game.js         spelregels, kaarten maken, levels
   js/ai.js           computertegenstanders
-  js/render.js       tekenen van het speelveld
+  js/render.js       tekenen van het speelveld (3D-tegels, zee, animaties)
+  js/sprites.js      getekende kastelen, bomen en eenheden
+  js/sfx.js          geluidseffecten
   js/store.js        verdienmodel: in-app aankopen en advertenties
   js/main.js         schermen en bediening
 docs/                verdienmodel, stappenplan App Store, privacybeleid

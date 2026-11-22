@@ -1,6 +1,6 @@
 // Voortgang lokaal bewaren. Werkt ook als opslag geblokkeerd is (dan alleen in het geheugen).
 const KEY = 'eilandrijk.v1';
-const DEFAULTS = { stars: {}, color: '#2f7de1', owned: [], levelsPlayed: 0, seenHelp: false, sound: true };
+const DEFAULTS = { stars: {}, color: '#2f7de1', owned: [], levelsPlayed: 0, seenHelp: false, sound: true, turnTime: 60 };
 let cache = null;
 
 export function load() {
