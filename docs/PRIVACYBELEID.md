@@ -1,8 +1,8 @@
 # Privacybeleid Eilandrijk
 
-*Laatst bijgewerkt: [datum invullen]*
+*Laatst bijgewerkt: 22 november 2026*
 
-Eilandrijk is gemaakt door [naam invullen]. In dit beleid lees je welke gegevens de app gebruikt.
+Eilandrijk is gemaakt door MeesterZeth. In dit beleid lees je welke gegevens de app gebruikt.
 
 **Wat we zelf bewaren.** Je voortgang (sterren, gekozen kleur en aankopen) wordt alleen op je eigen toestel
 opgeslagen. Wij krijgen deze gegevens niet.
@@ -17,4 +17,4 @@ dan krijg je advertenties die niet op jou zijn afgestemd. Met Premium zie je gee
 
 **Kinderen.** De app is niet speciaal voor kinderen onder 13 jaar gemaakt.
 
-**Contact.** Heb je vragen? Mail naar [e-mailadres invullen].
+**Contact.** Heb je vragen? Mail naar zethvanhalteren@icloud.com.

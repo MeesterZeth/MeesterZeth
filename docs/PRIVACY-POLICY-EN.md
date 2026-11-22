@@ -1,8 +1,8 @@
 # Eilandrijk Privacy Policy
 
-*Last updated: [fill in date]*
+*Last updated: 22 November 2026*
 
-Eilandrijk is made by [fill in name]. This policy explains what data the app uses.
+Eilandrijk is made by MeesterZeth. This policy explains what data the app uses.
 
 **What we store.** Your progress (stars, achievements, settings, saved game and purchases) is stored only on your own device. We do not receive this data.
 
@@ -12,4 +12,4 @@ Eilandrijk is made by [fill in name]. This policy explains what data the app use
 
 **Children.** The app is not specifically directed at children under 13.
 
-**Contact.** Questions? Email [fill in email address].
+**Contact.** Questions? Email zethvanhalteren@icloud.com.
