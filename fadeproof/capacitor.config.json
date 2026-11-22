@@ -1,0 +1,10 @@
+{
+  "appId": "nl.meesterzeth.fadeproof",
+  "appName": "Fadeproof",
+  "webDir": "www",
+  "ios": { "contentInset": "never", "backgroundColor": "#15171B" },
+  "plugins": {
+    "SplashScreen": { "launchShowDuration": 800, "launchAutoHide": true, "backgroundColor": "#15171B", "showSpinner": false },
+    "StatusBar": { "overlaysWebView": true }
+  }
+}

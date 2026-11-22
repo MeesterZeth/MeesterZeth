@@ -62,3 +62,7 @@ capacitor.config.json  instellingen om er een iOS/Android-app van te maken
 ## Naar de App Store
 
 Zie [docs/APP-STORE-STAPPEN.md](docs/APP-STORE-STAPPEN.md) en [docs/VERDIENMODEL.md](docs/VERDIENMODEL.md).
+
+---
+
+**Ook in deze repository:** [Fadeproof](fadeproof/README.md), een studieplanner-game voor studenten (map `fadeproof/`).
