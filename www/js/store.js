@@ -1,9 +1,14 @@
 // Verdienmodel: in-app aankopen en (optionele) advertenties.
 //
-// In de browser draait alles in TESTMODUS: aankopen en reclame worden gesimuleerd.
-// In de echte app (Capacitor op iOS/Android) worden de native plugins gebruikt:
+// In de browser draait alles in TESTMODUS: aankopen en reclame worden nagespeeld.
+// In de echte app (Capacitor op iOS/Android) worden de native plugins gebruikt via window.NativePlugins
+// (zie src/native.js, gebundeld naar www/vendor/native.js):
 //   - RevenueCat  (@revenuecat/purchases-capacitor) voor App Store / Google Play aankopen
 //   - AdMob       (@capacitor-community/admob)       voor beloonde video's en tussenadvertenties
+// Volgorde bij het opstarten (verplicht in Europa):
+//   1. Google-toestemmingsvenster (UMP/GDPR) als dat nodig is
+//   2. Apple-vraag "Sta toe dat Eilandrijk je volgt" (App Tracking Transparency)
+//   3. Pas daarna advertenties laden
 // Zie docs/APP-STORE-STAPPEN.md voor het instellen van de sleutels en product-ID's.
 import * as storage from './storage.js';
 
@@ -19,20 +24,8 @@ export const CONFIG = {
 };
 
 export const PRODUCTS = {
-  premium: {
-    id: 'nl.meesterzeth.eilandrijk.premium',
-    title: 'Premium',
-    icon: '👑',
-    price: '€ 3,99',
-    desc: 'Alle 30 levels, geen advertenties en elke level +15 startgoud.',
-  },
-  colors: {
-    id: 'nl.meesterzeth.eilandrijk.kleuren',
-    title: 'Kleurenpakket',
-    icon: '🎨',
-    price: '€ 1,99',
-    desc: 'Speel met 5 extra rijkskleuren. Puur voor de looks.',
-  },
+  premium: { id: 'nl.meesterzeth.eilandrijk.premium', price: '€ 3,99' },
+  colors: { id: 'nl.meesterzeth.eilandrijk.kleuren', price: '€ 1,99' },
 };
 
 export const COLORS = [
@@ -44,20 +37,19 @@ export const COLORS = [
   { id: 'turkoois', name: 'Turkoois', value: '#0fb5c4', pack: true },
 ];
 
-const cap = () => window.Capacitor;
+const NP = () => window.NativePlugins || null;
+const cap = () => (NP() && NP().Capacitor) || window.Capacitor || null;
 export const isNative = () => !!(cap() && cap().isNativePlatform && cap().isNativePlatform());
 const platform = () => (cap() && cap().getPlatform ? cap().getPlatform() : 'web');
-const plugin = (...names) => {
-  const P = cap() && cap().Plugins;
-  if (!P) return null;
-  for (const n of names) if (P[n]) return P[n];
-  return null;
-};
-const Purchases = () => plugin('Purchases', 'PurchasesCapacitor');
-const AdMob = () => plugin('AdMob');
+const Purchases = () => (isNative() && NP() ? NP().Purchases : null);
+const AdMob = () => (isNative() && NP() ? NP().AdMob : null);
 
 let nativeProducts = {};
-let mockAdUI = null; // functie(duurSeconden) -> Promise<boolean>, gezet door de UI
+let purchasesReady = false;
+let adsReady = false;
+let canShowAds = false;
+let privacyOptionsRequired = false;
+let mockAdUI = null; // functie(duurSeconden, beloond) -> Promise<boolean>, gezet door de UI
 
 export function setMockAdUI(fn) { mockAdUI = fn; }
 
@@ -70,48 +62,78 @@ function grant(productKey) {
 }
 
 function applyCustomerInfo(info) {
-  const active = (info && info.entitlements && info.entitlements.active) || {};
-  const ids = new Set([
-    ...Object.keys(active),
-    ...((info && info.allPurchasedProductIdentifiers) || []),
-  ]);
+  if (!info) return;
+  const active = (info.entitlements && info.entitlements.active) || {};
+  const ids = new Set([...Object.keys(active), ...(info.allPurchasedProductIdentifiers || [])]);
   for (const [k, p] of Object.entries(PRODUCTS)) {
     if (ids.has(k) || ids.has(p.id)) grant(k);
   }
 }
 
-export async function init() {
-  if (!isNative()) return;
+async function setupPurchases() {
   const P = Purchases();
-  if (P) {
-    try {
-      const apiKey = platform() === 'ios' ? CONFIG.revenueCatApiKeyIOS : CONFIG.revenueCatApiKeyAndroid;
-      await P.configure({ apiKey });
-      const res = await P.getProducts({ productIdentifiers: Object.values(PRODUCTS).map(p => p.id) });
-      for (const prod of (res && res.products) || []) {
-        nativeProducts[prod.identifier] = prod;
-        const entry = Object.values(PRODUCTS).find(p => p.id === prod.identifier);
-        if (entry && prod.priceString) entry.price = prod.priceString; // prijs in lokale valuta
-      }
-      const info = await P.getCustomerInfo();
-      applyCustomerInfo(info && (info.customerInfo || info));
-    } catch (e) { console.warn('Aankopen niet beschikbaar', e); }
+  if (!P) return;
+  const apiKey = platform() === 'ios' ? CONFIG.revenueCatApiKeyIOS : CONFIG.revenueCatApiKeyAndroid;
+  if (apiKey.includes('VUL_HIER')) { console.warn('RevenueCat-sleutel nog niet ingevuld'); return; }
+  await P.configure({ apiKey });
+  purchasesReady = true;
+  // Premium en Kleurenpakket zijn eenmalige aankopen, geen abonnementen.
+  const res = await P.getProducts({ productIdentifiers: Object.values(PRODUCTS).map(p => p.id), type: 'NON_SUBSCRIPTION' });
+  for (const prod of (res && res.products) || []) {
+    nativeProducts[prod.identifier] = prod;
+    const entry = Object.values(PRODUCTS).find(p => p.id === prod.identifier);
+    if (entry && prod.priceString) entry.price = prod.priceString; // prijs in lokale valuta
   }
+  const info = await P.getCustomerInfo();
+  applyCustomerInfo(info && (info.customerInfo || info));
+}
+
+async function setupAds() {
   const A = AdMob();
-  if (A && !owns('premium')) {
-    try { await A.initialize({}); } catch (e) { console.warn('AdMob niet beschikbaar', e); }
+  if (!A || owns('premium')) return;
+  // 1. Google-toestemming (Europa). Toont alleen een venster als het nodig is.
+  try {
+    let info = await A.requestConsentInfo();
+    if (info.isConsentFormAvailable && info.status === 'REQUIRED') info = await A.showConsentForm();
+    canShowAds = info.canRequestAds !== false;
+    privacyOptionsRequired = info.privacyOptionsRequirementStatus === 'REQUIRED';
+  } catch (e) {
+    console.warn('Toestemmingsvenster niet beschikbaar', e);
+    canShowAds = true; // buiten Europa of zonder venster: gewone (niet-gepersonaliseerde) reclame
+  }
+  // 2. Apple: mag de app volgen? (iOS 14+). Weigeren mag: dan krijg je niet-gepersonaliseerde reclame.
+  if (platform() === 'ios') {
+    try {
+      const s = await A.trackingAuthorizationStatus();
+      if (s && s.status === 'notDetermined') await A.requestTrackingAuthorization();
+    } catch (e) { console.warn('Volg-vraag niet beschikbaar', e); }
+  }
+  // 3. Reclame starten.
+  if (canShowAds) {
+    await A.initialize({});
+    adsReady = true;
   }
 }
 
+export async function init() {
+  if (!isNative()) return;
+  try { await setupPurchases(); } catch (e) { console.warn('Aankopen niet beschikbaar', e); }
+  try { await setupAds(); } catch (e) { console.warn('Reclame niet beschikbaar', e); }
+}
+
+// Geeft { ok, cancelled } terug.
 export async function purchase(productKey) {
   const prod = PRODUCTS[productKey];
-  if (isNative() && Purchases()) {
+  if (isNative()) {
+    const P = Purchases();
+    const storeProduct = nativeProducts[prod.id];
+    if (!P || !purchasesReady || !storeProduct) return false;
     try {
-      const res = await Purchases().purchaseStoreProduct({ product: nativeProducts[prod.id] });
+      const res = await P.purchaseStoreProduct({ product: storeProduct });
       applyCustomerInfo(res && res.customerInfo);
       return owns(productKey);
     } catch (e) {
-      console.warn('Aankoop geannuleerd of mislukt', e);
+      if (!(e && (e.userCancelled || (e.data && e.data.userCancelled)))) console.warn('Aankoop mislukt', e);
       return false;
     }
   }
@@ -121,13 +143,22 @@ export async function purchase(productKey) {
 }
 
 export async function restore() {
-  if (isNative() && Purchases()) {
+  const P = Purchases();
+  if (P && purchasesReady) {
     try {
-      const res = await Purchases().restorePurchases();
+      const res = await P.restorePurchases();
       applyCustomerInfo(res && (res.customerInfo || res));
     } catch (e) { console.warn('Herstellen mislukt', e); }
   }
   return Object.keys(PRODUCTS).filter(owns);
+}
+
+// Moet de speler zijn reclame-toestemming kunnen wijzigen? (verplicht in Europa)
+export function privacyOptionsAvailable() { return isNative() && privacyOptionsRequired; }
+export async function showPrivacyOptions() {
+  const A = AdMob();
+  if (!A) return;
+  try { await A.showPrivacyOptionsForm(); } catch (e) { console.warn('Privacyvenster niet beschikbaar', e); }
 }
 
 const adIds = () => (platform() === 'ios'
@@ -136,10 +167,12 @@ const adIds = () => (platform() === 'ios'
 
 // Beloonde video: speler kiest er zelf voor. Geeft true als de beloning verdiend is.
 export async function showRewardedAd() {
-  if (isNative() && AdMob()) {
+  if (isNative()) {
+    const A = AdMob();
+    if (!A || !adsReady) return false;
     try {
-      await AdMob().prepareRewardVideoAd({ adId: adIds().rewarded });
-      const reward = await AdMob().showRewardVideoAd();
+      await A.prepareRewardVideoAd({ adId: adIds().rewarded });
+      const reward = await A.showRewardVideoAd();
       return !!reward;
     } catch (e) {
       console.warn('Reclame niet beschikbaar', e);
@@ -154,12 +187,21 @@ export async function maybeShowInterstitial() {
   if (owns('premium')) return;
   const played = storage.load().levelsPlayed;
   if (played === 0 || played % CONFIG.interstitialEvery !== 0) return;
-  if (isNative() && AdMob()) {
+  if (isNative()) {
+    const A = AdMob();
+    if (!A || !adsReady) return;
     try {
-      await AdMob().prepareInterstitial({ adId: adIds().inter });
-      await AdMob().showInterstitial();
+      await A.prepareInterstitial({ adId: adIds().inter });
+      await A.showInterstitial();
     } catch (e) { console.warn('Reclame niet beschikbaar', e); }
     return;
   }
   if (mockAdUI) await mockAdUI(3, false);
+}
+
+// Trillen op de telefoon (licht of zwaar).
+export function haptic(heavy = false) {
+  const H = isNative() && NP() ? NP().Haptics : null;
+  if (H && H.impact) { H.impact({ style: heavy ? 'HEAVY' : 'LIGHT' }).catch(() => {}); return; }
+  if (navigator.vibrate) navigator.vibrate(heavy ? 40 : 15);
 }

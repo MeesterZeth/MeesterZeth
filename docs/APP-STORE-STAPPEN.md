@@ -23,6 +23,19 @@ npx cap open ios         # opent Xcode
 Kies in Xcode bij *Signing & Capabilities* je Team en voeg de capability **In-App Purchase** toe.
 Zet bij *Deployment Info* het scherm op **Portrait**.
 
+## Stap 1b – iOS-instellingen
+
+Draai na `npx cap add ios` één keer:
+```bash
+npm run ios:setup
+```
+Dit zet de reclame-instellingen, de tekst bij Apple's volg-vraag, "alleen iPhone" en "alleen staand scherm" goed.
+
+**Een nieuwe versie van het spel binnenhalen?** Vervang de mappen `www`, `src` en `scripts` en het bestand `package.json` door de nieuwe versie en draai:
+```bash
+npm run ios:update
+```
+
 ## Stap 2 – Icoon en opstartscherm
 
 Het icoon en het opstartscherm staan al klaar in de map `assets/`:
@@ -54,9 +67,9 @@ RevenueCat is gratis tot $2.500 omzet per maand. Het regelt de lastige kant van 
 1. Maak een account op admob.google.com en voeg de app toe.
 2. Maak een advertentie-unit **Rewarded** en een advertentie-unit **Interstitial**.
 3. Zet de ID's in `www/js/store.js`. Tot dan staan er **testadvertenties** van Google. Klik nooit op je eigen echte advertenties!
-4. Zet het AdMob-app-ID in `ios/App/App/Info.plist` (sleutel `GADApplicationIdentifier`).
-5. Apple vraagt toestemming voor tracking (App Tracking Transparency). Voeg `NSUserTrackingUsageDescription`
-   toe aan Info.plist, bijvoorbeeld: *"Hiermee tonen we advertenties die beter bij je passen."*
+4. Zet je AdMob-app-ID in `scripts/ios-setup.sh` (bij `ADMOB_APP_ID`) en draai `npm run ios:setup`.
+5. Maak in AdMob bij **Privacy & messaging** een **GDPR-bericht** (Europese toestemming) en een **IDFA-uitleg** (iOS) aan en publiceer ze. De app toont die vensters automatisch.
+6. De vraag "Sta toe dat Eilandrijk je volgt" (App Tracking Transparency) zit al in de app. De tekst erbij zet `npm run ios:setup` goed.
 
 > ⚠️ De koppeling met RevenueCat en AdMob staat al klaar in `store.js`, maar is nog **niet op een echt toestel getest**.
 > Test eerst met een **Sandbox-testaccount** (App Store Connect → Gebruikers en toegang → Sandbox)

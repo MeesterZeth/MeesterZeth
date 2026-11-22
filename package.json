@@ -3,13 +3,16 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Eilandrijk – een strategiespel op een eiland van zeshoeken.",
+  "description": "Eilandrijk \u2013 een strategiespel op een eiland van zeshoeken.",
   "scripts": {
     "start": "npx --yes serve www -l 8080",
     "test": "node tests/simulate.js",
-    "cap:sync": "npx cap sync",
+    "cap:sync": "npm run build:native && npx cap sync",
     "ios": "npx cap open ios",
-    "android": "npx cap open android"
+    "android": "npx cap open android",
+    "build:native": "esbuild src/native.js --bundle --format=iife --minify --target=es2020 --outfile=www/vendor/native.js",
+    "ios:setup": "bash scripts/ios-setup.sh",
+    "ios:update": "npm install && npm run build:native && npx cap sync ios && npm run ios:setup"
   },
   "dependencies": {
     "@capacitor-community/admob": "^8.4.2",
@@ -20,6 +23,7 @@
     "@revenuecat/purchases-capacitor": "^14.1.2"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.6.2"
+    "@capacitor/cli": "^8.6.2",
+    "esbuild": "^0.25.0"
   }
 }

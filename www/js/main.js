@@ -46,9 +46,7 @@ const difficulty = () => (settings().difficulty in DIFFICULTIES ? settings().dif
 
 // Trillen: via de Capacitor-plugin op iPhone, anders via de browser.
 function buzz(heavy = false) {
-  const H = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics;
-  if (H && H.impact) H.impact({ style: heavy ? 'HEAVY' : 'LIGHT' }).catch(() => {});
-  else if (navigator.vibrate) navigator.vibrate(heavy ? 40 : 15);
+  store.haptic(heavy);
 }
 
 function award(id) {
@@ -241,6 +239,7 @@ function openSettings(fromGame = false) {
     ${seg('music', [['1', t('set.on')], ['0', t('set.off')]], s.music !== false ? '1' : '0')}
     ${fromGame ? '' : `<span class="setting-label">${t('set.color')}</span><div class="colors">${swatches}</div>
     ${hasPack ? '' : `<p class="small">${t('set.colorsHint')}</p>`}
+    ${store.privacyOptionsAvailable() ? `<button class="btn" data-adprivacy>${t('set.adPrivacy')}</button>` : ''}
     <button class="btn" data-reset>${t('set.reset')}</button>`}
     <p class="small">${t('set.privacy')} ${t('set.version', { v: APP_VERSION })}</p>
     <button class="btn primary big" data-close>${t('common.done')}</button>`, box => {
@@ -268,6 +267,8 @@ function openSettings(fromGame = false) {
       storage.update(st => { st.color = b.dataset.color; });
       sfx.select(); openSettings(fromGame);
     });
+    const adp = box.querySelector('[data-adprivacy]');
+    if (adp) adp.onclick = () => { sfx.click(); store.showPrivacyOptions(); };
     const reset = box.querySelector('[data-reset]');
     if (reset) reset.onclick = () => {
       if (reset.dataset.armed) { storage.reset(); openSettings(fromGame); return; }

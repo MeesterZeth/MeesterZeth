@@ -154,6 +154,7 @@ const NL = {
   'set.color': 'Kleur van jouw rijk',
   'set.colorsHint': 'Extra kleuren zitten in het Kleurenpakket.',
   'set.reset': 'Voortgang wissen',
+  'set.adPrivacy': 'Privacy-instellingen voor advertenties',
   'set.resetConfirm': 'Tik nog een keer om alle sterren te wissen',
   'set.privacy': 'Aankopen blijven bewaard. Eilandrijk verzamelt zelf geen persoonsgegevens.',
 
@@ -363,6 +364,7 @@ const EN = {
   'set.color': 'Your empire\'s color',
   'set.colorsHint': 'Extra colors are in the Color Pack.',
   'set.reset': 'Reset progress',
+  'set.adPrivacy': 'Ad privacy settings',
   'set.resetConfirm': 'Tap again to erase all stars',
   'set.privacy': 'Purchases are kept. Eilandrijk itself collects no personal data.',
 
