@@ -16,7 +16,7 @@ import * as store from './store.js';
 
 const $ = sel => document.querySelector(sel);
 const AI_DELAY = 340;
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.0.1';
 
 let game = null;
 let renderer = null;
@@ -926,9 +926,11 @@ function loop(now) {
       }
     }
     if (running && game.current !== 0) clock.oppElapsed += dt;
+    if (renderer.sizeChanged()) renderer.fit(game, true);
     renderer.draw(game, ui, now);
     if (now - lastClockUi > 100) { updateClocks(); lastClockUi = now; }
   } else if ($('#screen-menu').classList.contains('active') && menuRenderer) {
+    if (menuRenderer.sizeChanged()) menuRenderer.fit(menuGame);
     menuRenderer.draw(menuGame, {}, now);
   }
   requestAnimationFrame(loop);

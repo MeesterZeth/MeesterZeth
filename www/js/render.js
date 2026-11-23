@@ -27,7 +27,9 @@ export class Renderer {
     this.waves = [];
   }
 
-  fit(state) {
+  // keepView: bij een formaatwijziging de zoom en het beeldmidden bewaren.
+  fit(state, keepView = false) {
+    const old = keepView && this.base ? { zoom: this.zoom, w: this.w, h: this.h, panX: this.panX, panY: this.panY } : null;
     this.dpr = Math.min(3, window.devicePixelRatio || 1);
     const rect = this.canvas.getBoundingClientRect();
     this.w = Math.max(1, rect.width);
@@ -56,6 +58,11 @@ export class Renderer {
     this.zoom = 1;
     this.panX = 0;
     this.panY = 0;
+    if (old && old.zoom > 1) {
+      this.zoom = old.zoom;
+      this.panX = old.panX * (this.w / old.w);
+      this.panY = old.panY * (this.h / old.h);
+    }
     this.sprites.clear();
     this.applyView();
     const rng = mulberry32(7);
@@ -65,6 +72,12 @@ export class Renderer {
   }
 
   markDirty() { this.dirty = true; }
+
+  // Is het canvas op het scherm groter of kleiner geworden dan waarmee we rekenen?
+  sizeChanged() {
+    const r = this.canvas.getBoundingClientRect();
+    return Math.abs(r.width - this.w) > 0.5 || Math.abs(r.height - this.h) > 0.5;
+  }
 
   // ---------- zoomen en schuiven ----------
 

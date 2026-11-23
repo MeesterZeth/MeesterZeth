@@ -206,22 +206,24 @@ h1, h2, h3, .display { font-family: var(--display); font-weight: 400; letter-spa
 
 /* Paneel onder */
 .panel { background: linear-gradient(#10233a, var(--panel)); padding: 10px 12px calc(10px + var(--safe-bottom)); border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; box-shadow: 0 -4px 14px rgba(0,0,0,.35); z-index: 2; }
-.panel-info { font-size: .9rem; min-height: 1.3em; color: var(--muted); line-height: 1.35; }
+.panel-info { font-size: .9rem; min-height: 2.7em; color: var(--muted); line-height: 1.35; }
 .panel-info b { color: var(--text); }
 .legend { display: inline-flex; align-items: center; gap: 4px; margin-right: 8px; white-space: nowrap; }
 .legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
-.panel-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 6px; }
-.panel-actions:empty { display: none; }
+/* Eén rij met vaste hoogte, zodat het speelveld niet verspringt als er knoppen verschijnen. */
+.panel-actions { display: flex; gap: 6px; min-height: 82px; overflow-x: auto; scrollbar-width: none; }
+.panel-actions::-webkit-scrollbar { display: none; }
 .card {
   border: 0; border-radius: 14px; padding: 6px 4px 7px; font: inherit; color: var(--text); background: var(--panel-2); cursor: pointer;
-  display: flex; flex-direction: column; align-items: center; gap: 1px; box-shadow: 0 4px 0 #0a1622, inset 0 1px 0 rgba(255,255,255,.12); font-size: .78rem;
+  display: flex; flex-direction: column; align-items: center; gap: 1px; box-shadow: 0 4px 0 #0a1622, inset 0 1px 0 rgba(255,255,255,.12); font-size: .72rem;
+  flex: 1 1 0; min-width: 58px; height: 78px; justify-content: center; white-space: nowrap;
 }
 .card:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 #0a1622; }
 .card:disabled { opacity: .4; }
-.card img { width: 38px; height: 38px; }
+.card img { width: 34px; height: 34px; }
 .card .cost { display: flex; align-items: center; gap: 3px; font-family: var(--display); font-size: .95rem; color: var(--gold); }
 .card .cost .coin { width: 13px; height: 13px; }
-.card.wide { grid-column: 1 / -1; flex-direction: row; justify-content: center; gap: 8px; padding: 10px; font-family: var(--display); font-size: 1rem; }
+.card.wide { flex: 1 1 100%; flex-direction: row; justify-content: center; gap: 8px; padding: 10px; font-family: var(--display); font-size: 1.05rem; }
 .btn.end { padding: 14px; font-size: 1.25rem; }
 .btn.end.fast { background: linear-gradient(#ffe07a, var(--gold)); color: #4a3000; box-shadow: 0 4px 0 var(--gold-dark); }
 
@@ -277,4 +279,26 @@ h1, h2, h3, .display { font-family: var(--display); font-weight: 400; letter-spa
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition: none !important; }
+}
+
+/* Kleine schermen (bijv. iPhone SE): compactere balken, meer ruimte voor het eiland. */
+@media (max-height: 740px) {
+  .hud { gap: 5px; padding: calc(5px + var(--safe-top)) 10px 6px; }
+  .hud-top .btn.icon { width: 36px; height: 36px; font-size: 1.1rem; }
+  .chip { font-size: 1.05rem; padding: 4px 10px; }
+  .coin { width: 17px; height: 17px; }
+  .clock { padding: 3px 8px; }
+  .clock b { font-size: 1rem; }
+  .standings-label { display: none; }
+  .share { height: 9px; }
+  .panel { gap: 5px; padding: 6px 10px calc(6px + var(--safe-bottom)); }
+  .panel-info { font-size: .8rem; min-height: 2.5em; }
+  .panel-actions { min-height: 64px; }
+  .card { height: 62px; font-size: .68rem; min-width: 54px; }
+  .card img { width: 26px; height: 26px; }
+  .card .cost { font-size: .85rem; }
+  .btn.end { padding: 10px; font-size: 1.1rem; }
+  .btn.icon.undo { width: 46px; }
+  .zoom { gap: 6px; top: 6px; right: 6px; }
+  .zoom .btn { width: 36px; height: 36px; font-size: 1.3rem; }
 }
