@@ -84,5 +84,5 @@ strategy,hexagon,conquest,turn-based,tactics,offline,castle,empire,4x,war,army,b
 
 - **Categorie:** Games, subcategorieën Strategie en Bordspel
 - **Leeftijd:** 9+ (milde fantasy-strijd, zonder bloed). Vul de vragenlijst in App Store Connect eerlijk in.
-- **Screenshots:** in `store/screenshots/` per schermformaat: `iPhone-6.9-inch` (1320 × 2868), `iPhone-6.7-inch` (1290 × 2796) en `iPhone-6.5-inch` (1284 × 2778), elk met `nl` en `en`
+- **Screenshots:** in `store/screenshots/` per schermformaat: `iPhone-6.3-inch` (1206 × 2622, het formaat dat App Store Connect nu vraagt), `iPhone-6.1-inch` (1179 × 2556), `iPhone-6.9-inch` (1320 × 2868), `iPhone-6.7-inch` (1290 × 2796) en `iPhone-6.5-inch` (1284 × 2778), elk met `nl` en `en`
 - **Icoon:** `assets/icon-only.png` (1024 × 1024)
