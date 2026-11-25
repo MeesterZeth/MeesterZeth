@@ -23,7 +23,7 @@ Vink af wat klaar is. Bij elke stap staat wie wat doet.
 - [x] Account aanmaken op admob.google.com
 - [x] App toevoegen: platform iOS, "Staat de app al in de winkel?" → Nee, naam Eilandrijk
 - [x] Twee advertentie-eenheden maken: **Rewarded** (beloonde video) en **Interstitial** (tussenadvertentie)
-- [ ] Bij **Privacy & messaging**: een **GDPR-bericht** (Europa) en een **IDFA-uitleg** (iOS) maken en publiceren
+- [x] Bij **Privacy & messaging**: een **GDPR-bericht** (Europa) en een **IDFA-uitleg** (iOS) maken en publiceren
 - [x] Het **App-ID** (`ca-app-pub-…~…`) en de **twee advertentie-ID's** (`ca-app-pub-…/…`) naar Claude sturen
 
 ## 3. Claude zet de sleutels in de app
