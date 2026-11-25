@@ -28,19 +28,19 @@ Vink af wat klaar is. Bij elke stap staat wie wat doet.
 
 ## 3. Claude zet de sleutels in de app
 - [x] Claude vult de RevenueCat-sleutel en de AdMob-ID's in
-- [ ] **Vóór de App Store-versie:** in `www/js/store.js` `useTestAds: true` → `false` zetten (Claude doet dit), dan opnieuw uploaden
+- [x] **Vóór de App Store-versie:** in `www/js/store.js` `useTestAds: true` → `false` gezet (versie 1.0.3)
 
 ## 4. Nieuwe versie uploaden – jij, ± 20 min
-- [ ] Nieuwe ZIP van GitHub downloaden, `www`, `src`, `scripts` en `package.json` vervangen
-- [ ] In Terminal: `cd ~/Documents/eilandrijk` en `npm run ios:update`
-- [ ] In Xcode bij **General** het **Build**-nummer met 1 ophogen (bijv. 1 → 2)
-- [ ] **Any iOS Device** kiezen → **Product → Archive** → **Distribute App → App Store Connect → Upload**
+- [x] Nieuwe ZIP van GitHub downloaden, `www`, `src`, `scripts` en `package.json` vervangen
+- [x] In Terminal: `cd ~/Documents/eilandrijk` en `npm run ios:update`
+- [x] In Xcode bij **General** het **Build**-nummer met 1 ophogen (bijv. 1 → 2)
+- [x] **Any iOS Device** kiezen → **Product → Archive** → **Distribute App → App Store Connect → Upload**
 
 ## 5. Testen op je iPhone via TestFlight – jij
-- [ ] Premium kopen (in TestFlight is dat gratis: het is een test)
-- [ ] Aankopen herstellen
-- [ ] Toestemmingsvenster (Europa) en volg-vraag verschijnen
-- [ ] Testadvertentie bekijken (beloonde video)
+- [x] Premium kopen (in TestFlight is dat gratis: het is een test)
+- [x] Aankopen herstellen
+- [x] Toestemmingsvenster (Europa) en volg-vraag verschijnen
+- [x] Testadvertentie bekijken (beloonde video)
 
 ## 6. Medestudenten laten testen (optioneel) – jij
 - [ ] TestFlight → Test Information invullen (beschrijving, feedback-mail, privacy-URL)

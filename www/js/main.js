@@ -16,7 +16,7 @@ import * as store from './store.js';
 
 const $ = sel => document.querySelector(sel);
 const AI_DELAY = 340;
-const APP_VERSION = '1.0.2';
+const APP_VERSION = '1.0.3';
 
 let game = null;
 let renderer = null;

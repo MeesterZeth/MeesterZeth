@@ -18,7 +18,7 @@ export const CONFIG = {
   // TESTMODUS VOOR RECLAME: zet op false voor de versie die naar de App Store gaat.
   // Zolang dit true is, toont de app testreclame van Google (veilig voor TestFlight: kijken of
   // klikken op je eigen echte reclame kan je AdMob-account in de problemen brengen).
-  useTestAds: true,
+  useTestAds: false,
   // Eigen AdMob-advertentieblokken (Eilandrijk, iOS)
   admobRewardedIOS: 'ca-app-pub-8082305216822147/2710711129', // "Startgoud" (Beloond)
   admobInterstitialIOS: 'ca-app-pub-8082305216822147/2024315416', // "Tussen levels" (Interstitial)
