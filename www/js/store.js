@@ -13,7 +13,7 @@
 import * as storage from './storage.js';
 
 export const CONFIG = {
-  revenueCatApiKeyIOS: 'appl_VUL_HIER_JE_SLEUTEL_IN',
+  revenueCatApiKeyIOS: 'appl_iugDlKhqswxEmSGOMpRlrmlgEbf', // publieke RevenueCat-sleutel (mag in de app staan)
   revenueCatApiKeyAndroid: 'goog_VUL_HIER_JE_SLEUTEL_IN',
   // Google-testadvertenties. Vervang door je eigen AdMob-ID's vóór publicatie.
   admobRewardedIOS: 'ca-app-pub-3940256099942544/1712485313',

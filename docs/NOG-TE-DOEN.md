@@ -11,13 +11,13 @@ Vink af wat klaar is. Bij elke stap staat wie wat doet.
 - [x] Support- en privacypagina gemaakt
 
 ## 1. RevenueCat (aankopen) – jij, ± 30 min
-- [ ] Account en project "Eilandrijk" aanmaken op revenuecat.com
-- [ ] App toevoegen: App Store, bundle ID `nl.meesterzeth.eilandrijk`
-- [ ] In-App Purchase Key maken bij Apple (Users and Access → Integrations → In-App Purchase), het .p8-bestand downloaden en **goed bewaren**
-- [ ] .p8-bestand, Key ID en Issuer ID in RevenueCat zetten
-- [ ] Producten toevoegen: `nl.meesterzeth.eilandrijk.premium` en `nl.meesterzeth.eilandrijk.kleuren`
-- [ ] Rechten (entitlements) `premium` en `colors` aanmaken en koppelen aan de producten
-- [ ] De **publieke sleutel** (begint met `appl_`) naar Claude sturen
+- [x] Account en project "Eilandrijk" aanmaken op revenuecat.com
+- [x] App toevoegen: App Store, bundle ID `nl.meesterzeth.eilandrijk`
+- [x] In-App Purchase Key maken bij Apple (Users and Access → Integrations → In-App Purchase), het .p8-bestand downloaden en **goed bewaren**
+- [x] .p8-bestand, Key ID en Issuer ID in RevenueCat zetten
+- [x] Producten toevoegen: `nl.meesterzeth.eilandrijk.premium` en `nl.meesterzeth.eilandrijk.kleuren`
+- [x] Rechten (entitlements) `premium` en `colors` aanmaken en koppelen aan de producten
+- [x] De **publieke sleutel** (begint met `appl_`) naar Claude sturen
 
 ## 2. AdMob (reclame) – jij, ± 30 min
 - [ ] Account aanmaken op admob.google.com
