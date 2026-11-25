@@ -302,3 +302,8 @@ h1, h2, h3, .display { font-family: var(--display); font-weight: 400; letter-spa
   .zoom { gap: 6px; top: 6px; right: 6px; }
   .zoom .btn { width: 36px; height: 36px; font-size: 1.3rem; }
 }
+
+/* Technische info: lange teksten netjes laten afbreken */
+.diag-table { table-layout: fixed; }
+.diag-table th { width: 36%; white-space: normal; vertical-align: top; }
+.diag-table td { white-space: normal; overflow-wrap: anywhere; font-size: .8rem; }

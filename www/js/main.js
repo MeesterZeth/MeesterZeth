@@ -16,7 +16,7 @@ import * as store from './store.js';
 
 const $ = sel => document.querySelector(sel);
 const AI_DELAY = 340;
-const APP_VERSION = '1.0.1';
+const APP_VERSION = '1.0.2';
 
 let game = null;
 let renderer = null;
@@ -182,6 +182,11 @@ const PRODUCT_ICON = {
 };
 
 function openShop(reason) {
+  if (store.isNative() && !openShop.loading) {
+    // Prijzen en producten opnieuw ophalen als ze er nog niet zijn.
+    openShop.loading = true;
+    store.loadProducts().finally(() => { openShop.loading = false; });
+  }
   const testmode = store.isNative() ? '' : `<p class="testmode">${t('shop.testmode')}</p>`;
   const items = Object.entries(store.PRODUCTS).map(([k, p]) => {
     const owned = store.owns(k);
@@ -198,7 +203,8 @@ function openShop(reason) {
       b.disabled = true;
       const ok = await store.purchase(b.dataset.buy);
       if (ok) sfx.win();
-      openShop(ok ? t('shop.thanks') : reason);
+      const why = store.lastProblem('purchase');
+      openShop(ok ? t('shop.thanks') : why && why !== 'cancelled' ? t('shop.problem.' + why) : reason);
       if ($('#screen-levels').classList.contains('active')) renderLevels();
     });
     box.querySelector('[data-restore]').onclick = async () => {
@@ -242,6 +248,7 @@ function openSettings(fromGame = false) {
     ${store.privacyOptionsAvailable() ? `<button class="btn" data-adprivacy>${t('set.adPrivacy')}</button>` : ''}
     <button class="btn" data-reset>${t('set.reset')}</button>`}
     <p class="small">${t('set.privacy')} ${t('set.version', { v: APP_VERSION })}</p>
+    ${fromGame ? '' : `<button class="btn" data-diag>${t('set.diag')}</button>`}
     <button class="btn primary big" data-close>${t('common.done')}</button>`, box => {
     box.querySelectorAll('[data-lang]').forEach(b => b.onclick = () => {
       setLang(b.dataset.lang); sfx.click(); applyStatic(); if (game) refresh(); openSettings(fromGame);
@@ -267,6 +274,8 @@ function openSettings(fromGame = false) {
       storage.update(st => { st.color = b.dataset.color; });
       sfx.select(); openSettings(fromGame);
     });
+    const dg = box.querySelector('[data-diag]');
+    if (dg) dg.onclick = () => { sfx.click(); openDiag(); };
     const adp = box.querySelector('[data-adprivacy]');
     if (adp) adp.onclick = () => { sfx.click(); store.showPrivacyOptions(); };
     const reset = box.querySelector('[data-reset]');
@@ -320,7 +329,40 @@ function openBriefing(level) {
     if (ad) ad.onclick = async () => {
       const ok = await store.showRewardedAd();
       startLevel(level, ok ? AD_BONUS_GOLD : 0);
+      if (!ok && store.lastProblem('ad')) toast(t('ad.problem'));
     };
+  });
+}
+
+// Technische info: wat werkt er wel en niet met aankopen en reclame op dit toestel?
+function openDiag() {
+  const d = store.diag;
+  const esc = x => String(x).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  const rows = [
+    ['App', `${APP_VERSION} · ${d.platform}${d.native ? ' (app)' : ' (browser)'}`],
+    ['Plugins', d.plugins],
+    ['Aankopen', d.purchases],
+    ['Producten', d.products.length ? d.products.join('<br>') : 'geen'],
+    ['Gekocht (RevenueCat)', d.customer || '–'],
+    ['Lokaal gekocht', settings().owned.join(', ') || 'niets'],
+    ['Toestemming (Google)', d.consent],
+    ['Volgen (Apple)', d.att],
+    ['Reclame', d.ads],
+    ['Laatste aankoop', d.lastPurchase || '–'],
+    ['Laatste reclame', d.lastAd || '–'],
+  ].map(([k, v]) => `<tr><th>${k}</th><td style="white-space:normal">${k === 'Producten' ? v : esc(v)}</td></tr>`).join('');
+  modal(`<h2>${t('set.diag')}</h2>
+    <p class="small">${t('diag.hint')}</p>
+    <table class="data-table diag-table">${rows}</table>
+    <pre style="flex-shrink:0;white-space:pre-wrap;font-size:.72rem;background:rgba(0,0,0,.3);padding:8px;border-radius:10px;max-height:160px;overflow:auto">${esc(d.log.join('\n') || '–')}</pre>
+    <button class="btn gold big" data-retry>${t('diag.retry')}</button>
+    <button class="btn primary big" data-close>${t('common.close')}</button>`, box => {
+    box.querySelector('[data-retry]').onclick = async e => {
+      e.target.disabled = true; e.target.textContent = '…';
+      await store.retry();
+      openDiag();
+    };
+    box.querySelector('[data-close]').onclick = closeModal;
   });
 }
 
@@ -1066,4 +1108,4 @@ function init() {
 init();
 
 // Handig bij testen: window.__eilandrijk.game
-window.__eilandrijk = { get game() { return game; }, get renderer() { return renderer; }, get tut() { return tut; }, get ui() { return ui; }, LEVELS, startLevel, aiTurn, endTurn };
+window.__eilandrijk = { store, get game() { return game; }, get renderer() { return renderer; }, get tut() { return tut; }, get ui() { return ui; }, LEVELS, startLevel, aiTurn, endTurn };
