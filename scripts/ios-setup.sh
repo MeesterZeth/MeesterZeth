@@ -5,8 +5,8 @@
 set -e
 cd "$(dirname "$0")/.."
 
-# Google AdMob app-ID. Nu het TEST-ID van Google; vervang door je eigen ID uit AdMob vóór publicatie.
-ADMOB_APP_ID="ca-app-pub-3940256099942544~1458002511"
+# Google AdMob app-ID van Eilandrijk (iOS)
+ADMOB_APP_ID="ca-app-pub-8082305216822147~6234576059"
 
 PLIST="ios/App/App/Info.plist"
 PBX="ios/App/App.xcodeproj/project.pbxproj"

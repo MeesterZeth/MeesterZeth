@@ -15,9 +15,16 @@ import * as storage from './storage.js';
 export const CONFIG = {
   revenueCatApiKeyIOS: 'appl_iugDlKhqswxEmSGOMpRlrmlgEbf', // publieke RevenueCat-sleutel (mag in de app staan)
   revenueCatApiKeyAndroid: 'goog_VUL_HIER_JE_SLEUTEL_IN',
-  // Google-testadvertenties. Vervang door je eigen AdMob-ID's vóór publicatie.
-  admobRewardedIOS: 'ca-app-pub-3940256099942544/1712485313',
-  admobInterstitialIOS: 'ca-app-pub-3940256099942544/4411468910',
+  // TESTMODUS VOOR RECLAME: zet op false voor de versie die naar de App Store gaat.
+  // Zolang dit true is, toont de app testreclame van Google (veilig voor TestFlight: kijken of
+  // klikken op je eigen echte reclame kan je AdMob-account in de problemen brengen).
+  useTestAds: true,
+  // Eigen AdMob-advertentieblokken (Eilandrijk, iOS)
+  admobRewardedIOS: 'ca-app-pub-8082305216822147/2710711129', // "Startgoud" (Beloond)
+  admobInterstitialIOS: 'ca-app-pub-3940256099942544/4411468910', // TODO: eigen "Tussen levels"-ID invullen
+  // Google-testadvertenties (worden gebruikt zolang useTestAds true is)
+  testRewardedIOS: 'ca-app-pub-3940256099942544/1712485313',
+  testInterstitialIOS: 'ca-app-pub-3940256099942544/4411468910',
   admobRewardedAndroid: 'ca-app-pub-3940256099942544/5224354917',
   admobInterstitialAndroid: 'ca-app-pub-3940256099942544/1033173712',
   interstitialEvery: 3, // na elke 3e gespeelde level (alleen gratis versie)
@@ -161,9 +168,11 @@ export async function showPrivacyOptions() {
   try { await A.showPrivacyOptionsForm(); } catch (e) { console.warn('Privacyvenster niet beschikbaar', e); }
 }
 
-const adIds = () => (platform() === 'ios'
-  ? { rewarded: CONFIG.admobRewardedIOS, inter: CONFIG.admobInterstitialIOS }
-  : { rewarded: CONFIG.admobRewardedAndroid, inter: CONFIG.admobInterstitialAndroid });
+const adIds = () => {
+  if (platform() !== 'ios') return { rewarded: CONFIG.admobRewardedAndroid, inter: CONFIG.admobInterstitialAndroid };
+  if (CONFIG.useTestAds) return { rewarded: CONFIG.testRewardedIOS, inter: CONFIG.testInterstitialIOS };
+  return { rewarded: CONFIG.admobRewardedIOS, inter: CONFIG.admobInterstitialIOS };
+};
 
 // Beloonde video: speler kiest er zelf voor. Geeft true als de beloning verdiend is.
 export async function showRewardedAd() {
