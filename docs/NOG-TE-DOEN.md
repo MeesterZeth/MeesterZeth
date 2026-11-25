@@ -50,20 +50,20 @@ Vink af wat klaar is. Bij elke stap staat wie wat doet.
 ## 7. Beslissingen – jij
 - [ ] KvK-check doen op kvk.nl ("Moet ik mij inschrijven?")
 - [ ] DSA: handelaar (trader) ja, en welk adres, telefoon en e-mail je openbaar zet
-- [ ] Supportpagina staat op openbaar (controleren in een privévenster)
+- [x] Supportpagina staat op openbaar (controleren in een privévenster)
 
 ## 8. De App Store-pagina invullen – jij, met hulp van Claude
-- [ ] **App Information:** categorie Games → Strategy, leeftijdsclassificatie (vragenlijst), content rights
-- [ ] **Pricing and Availability:** gratis, alle landen behalve China
-- [ ] **App Privacy:** vragenlijst over gegevens (reclame via AdMob, aankopen via RevenueCat)
-- [ ] **Versie 1.0:** screenshots uit `store/screenshots`, teksten uit `docs/APP-STORE-TEKSTEN.md`
-- [ ] Support-URL: `https://claude.ai/artifact/C7YiKVce1wFsuhrsr8kPAw`
-- [ ] Privacy-URL: `https://claude.ai/artifact/C7YiKVce1wFsuhrsr8kPAw#privacy`
-- [ ] Build kiezen en de twee **In-App Purchases** toevoegen
-- [ ] App Review Information: contactgegevens, geen inlog nodig
+- [x] **App Information:** categorie Games → Strategy, leeftijdsclassificatie (vragenlijst), content rights
+- [x] **Pricing and Availability:** gratis, alle landen behalve China
+- [x] **App Privacy:** vragenlijst over gegevens (reclame via AdMob, aankopen via RevenueCat)
+- [x] **Versie 1.0:** screenshots uit `store/screenshots`, teksten uit `docs/APP-STORE-TEKSTEN.md`
+- [x] Support-URL: `https://claude.ai/artifact/C7YiKVce1wFsuhrsr8kPAw`
+- [x] Privacy-URL: `https://claude.ai/artifact/C7YiKVce1wFsuhrsr8kPAw#privacy`
+- [x] Build kiezen en de twee **In-App Purchases** toevoegen
+- [x] App Review Information: contactgegevens, geen inlog nodig
 
 ## 9. Insturen 🚀
-- [ ] **Add for Review → Submit**
+- [x] **Add for Review → Submit** (ingestuurd op 25 november 2026)
 - [ ] Wachten op Apple (meestal 1–3 dagen)
 - [ ] Goedgekeurd? Op **Release** drukken!
 
