@@ -21,7 +21,7 @@ export const CONFIG = {
   useTestAds: true,
   // Eigen AdMob-advertentieblokken (Eilandrijk, iOS)
   admobRewardedIOS: 'ca-app-pub-8082305216822147/2710711129', // "Startgoud" (Beloond)
-  admobInterstitialIOS: 'ca-app-pub-3940256099942544/4411468910', // TODO: eigen "Tussen levels"-ID invullen
+  admobInterstitialIOS: 'ca-app-pub-8082305216822147/2024315416', // "Tussen levels" (Interstitial)
   // Google-testadvertenties (worden gebruikt zolang useTestAds true is)
   testRewardedIOS: 'ca-app-pub-3940256099942544/1712485313',
   testInterstitialIOS: 'ca-app-pub-3940256099942544/4411468910',

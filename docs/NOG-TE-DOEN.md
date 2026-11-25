@@ -20,14 +20,15 @@ Vink af wat klaar is. Bij elke stap staat wie wat doet.
 - [x] De **publieke sleutel** (begint met `appl_`) naar Claude sturen
 
 ## 2. AdMob (reclame) – jij, ± 30 min
-- [ ] Account aanmaken op admob.google.com
-- [ ] App toevoegen: platform iOS, "Staat de app al in de winkel?" → Nee, naam Eilandrijk
-- [ ] Twee advertentie-eenheden maken: **Rewarded** (beloonde video) en **Interstitial** (tussenadvertentie)
+- [x] Account aanmaken op admob.google.com
+- [x] App toevoegen: platform iOS, "Staat de app al in de winkel?" → Nee, naam Eilandrijk
+- [x] Twee advertentie-eenheden maken: **Rewarded** (beloonde video) en **Interstitial** (tussenadvertentie)
 - [ ] Bij **Privacy & messaging**: een **GDPR-bericht** (Europa) en een **IDFA-uitleg** (iOS) maken en publiceren
-- [ ] Het **App-ID** (`ca-app-pub-…~…`) en de **twee advertentie-ID's** (`ca-app-pub-…/…`) naar Claude sturen
+- [x] Het **App-ID** (`ca-app-pub-…~…`) en de **twee advertentie-ID's** (`ca-app-pub-…/…`) naar Claude sturen
 
 ## 3. Claude zet de sleutels in de app
-- [ ] Claude vult de RevenueCat-sleutel en de AdMob-ID's in en verhoogt het buildnummer
+- [x] Claude vult de RevenueCat-sleutel en de AdMob-ID's in
+- [ ] **Vóór de App Store-versie:** in `www/js/store.js` `useTestAds: true` → `false` zetten (Claude doet dit), dan opnieuw uploaden
 
 ## 4. Nieuwe versie uploaden – jij, ± 20 min
 - [ ] Nieuwe ZIP van GitHub downloaden, `www`, `src`, `scripts` en `package.json` vervangen
