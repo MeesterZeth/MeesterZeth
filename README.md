@@ -1,5 +1,7 @@
 # Eilandrijk
 
+📲 **[Download in de App Store](https://apps.apple.com/app/eilandrijk-strategie/id6838846370)**
+
 Een strategiespel voor je telefoon. Je begint met een kleine hoofdstad op een eiland van zeshoeken.
 Verover vakje voor vakje het eiland, beheer je goud en versla de computertegenstanders.
 

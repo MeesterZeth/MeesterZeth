@@ -1,5 +1,7 @@
 # Marketingplan Eilandrijk
 
+**App Store-link:** https://apps.apple.com/app/eilandrijk-strategie/id6838846370
+
 **Kanalen:** Instagram, TikTok, App Store (Apple Search Ads)
 **Doelgroep:** mensen die van strategie, puzzels en rekenen houden (16–40 jaar), Nederland en Engelstalig
 **Jouw verhaal:** *"Pabostudent maakt zijn eigen strategiespel."* Gebruik dit overal: het is persoonlijk en opvallend.
@@ -101,10 +103,10 @@ Uitdaging werkt goed op TikTok.
 > 🎓 Gemaakt door een pabostudent
 > 📲 Gratis in de App Store 👇
 
-Zet in je bio de link naar de App Store (die krijg je na goedkeuring).
+Zet in je bio de link naar de App Store: https://apps.apple.com/app/eilandrijk-strategie/id6838846370
 
 ### Berichtje voor vrienden / medestudenten (voor reviews)
-> Hoi! Mijn spel Eilandrijk staat sinds vandaag in de App Store 🎉 Zou je hem willen downloaden en, als je hem leuk vindt, een review met sterren achterlaten? Dat helpt enorm om gevonden te worden. Dankjewel! [link]
+> Hoi! Mijn spel Eilandrijk staat sinds vandaag in de App Store 🎉 Zou je hem willen downloaden en, als je hem leuk vindt, een review met sterren achterlaten? Dat helpt enorm om gevonden te worden. Dankjewel! https://apps.apple.com/app/eilandrijk-strategie/id6838846370
 
 ### Reddit (Engels, r/iosgaming of r/IndieGaming)
 > **I'm a student teacher and just released my first strategy game on iOS – Eilandrijk**
@@ -113,7 +115,7 @@ Zet in je bio de link naar de App Store (die krijg je na goedkeuring).
 >
 > First 10 levels are free, a one-time Premium unlocks the rest (no subscriptions, no loot boxes).
 >
-> I'd love honest feedback from strategy fans! [link]
+> I'd love honest feedback from strategy fans! https://apps.apple.com/app/eilandrijk-strategie/id6838846370
 
 ---
 

@@ -1,5 +1,7 @@
 # Eilandrijk – nog te doen tot de App Store
 
+**App Store-link:** https://apps.apple.com/app/eilandrijk-strategie/id6838846370
+
 Vink af wat klaar is. Bij elke stap staat wie wat doet.
 
 ## ✅ Al gedaan
@@ -64,7 +66,7 @@ Vink af wat klaar is. Bij elke stap staat wie wat doet.
 
 ## 9. Insturen 🚀
 - [x] **Add for Review → Submit** (ingestuurd op 25 november 2026)
-- [ ] Wachten op Apple (meestal 1–3 dagen)
+- [x] Wachten op Apple – **goedgekeurd op 26 november 2026!** 🎉
 - [ ] Goedgekeurd? Op **Release** drukken!
 
 ## Daarna
