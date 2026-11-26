@@ -5,5 +5,6 @@ import { Capacitor } from '@capacitor/core';
 import { AdMob } from '@capacitor-community/admob';
 import { Purchases } from '@revenuecat/purchases-capacitor';
 import { Haptics } from '@capacitor/haptics';
+import { InAppReview } from '@capacitor-community/in-app-review';
 
-window.NativePlugins = { Capacitor, AdMob, Purchases, Haptics };
+window.NativePlugins = { Capacitor, AdMob, Purchases, Haptics, InAppReview };

@@ -303,3 +303,19 @@ export async function retry() {
   else await loadProducts();
   if (!adsReady) await setupAds().catch(e => { diag.ads = 'fout: ' + errText(e); });
 }
+
+// ---------- Reviews ----------
+export const APP_STORE_ID = '6838846370';
+export const REVIEW_URL = `https://apps.apple.com/app/id${APP_STORE_ID}?action=write-review`;
+
+// Apple's eigen beoordelingsvenster. Apple bepaalt zelf of het echt verschijnt (max. 3x per jaar).
+export async function requestReview() {
+  const R = isNative() && NP() ? NP().InAppReview : null;
+  if (!R) return false;
+  try { await R.requestReview(); logd('Reviewvraag getoond'); return true; } catch (e) { logd('Reviewvraag fout: ' + errText(e)); return false; }
+}
+
+// Open de App Store-pagina om een review te schrijven (knop in Instellingen).
+export function openReviewPage() {
+  try { window.open(REVIEW_URL, '_blank'); } catch { location.href = REVIEW_URL; }
+}

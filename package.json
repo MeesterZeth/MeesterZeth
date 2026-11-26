@@ -1,9 +1,9 @@
 {
   "name": "eilandrijk",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": true,
   "type": "module",
-  "description": "Eilandrijk \u2013 een strategiespel op een eiland van zeshoeken.",
+  "description": "Eilandrijk – een strategiespel op een eiland van zeshoeken.",
   "scripts": {
     "start": "npx --yes serve www -l 8080",
     "test": "node tests/simulate.js",
@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@capacitor-community/admob": "^8.4.2",
+    "@capacitor-community/in-app-review": "^8.0.0",
     "@capacitor/android": "^8.6.2",
     "@capacitor/core": "^8.6.2",
     "@capacitor/haptics": "^8.0.0",

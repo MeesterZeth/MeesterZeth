@@ -16,7 +16,7 @@ import * as store from './store.js';
 
 const $ = sel => document.querySelector(sel);
 const AI_DELAY = 340;
-const APP_VERSION = '1.0.3';
+const APP_VERSION = '1.0.4';
 
 let game = null;
 let renderer = null;
@@ -248,7 +248,8 @@ function openSettings(fromGame = false) {
     ${store.privacyOptionsAvailable() ? `<button class="btn" data-adprivacy>${t('set.adPrivacy')}</button>` : ''}
     <button class="btn" data-reset>${t('set.reset')}</button>`}
     <p class="small">${t('set.privacy')} ${t('set.version', { v: APP_VERSION })}</p>
-    ${fromGame ? '' : `<button class="btn" data-diag>${t('set.diag')}</button>`}
+    ${fromGame ? '' : `<button class="btn gold" data-review>★ ${t('set.review')}</button>
+    <button class="btn" data-diag>${t('set.diag')}</button>`}
     <button class="btn primary big" data-close>${t('common.done')}</button>`, box => {
     box.querySelectorAll('[data-lang]').forEach(b => b.onclick = () => {
       setLang(b.dataset.lang); sfx.click(); applyStatic(); if (game) refresh(); openSettings(fromGame);
@@ -274,6 +275,8 @@ function openSettings(fromGame = false) {
       storage.update(st => { st.color = b.dataset.color; });
       sfx.select(); openSettings(fromGame);
     });
+    const rv = box.querySelector('[data-review]');
+    if (rv) rv.onclick = () => { sfx.click(); store.openReviewPage(); };
     const dg = box.querySelector('[data-diag]');
     if (dg) dg.onclick = () => { sfx.click(); openDiag(); };
     const adp = box.querySelector('[data-adprivacy]');
@@ -885,6 +888,7 @@ async function finish() {
   if (tut) { tut = null; $('#coach').hidden = true; storage.update(s => { s.seenTutorial = true; }); }
   storage.update(s => {
     s.levelsPlayed++;
+    if (won) s.wins = (s.wins || 0) + 1;
     if (won) s.stars[level.id] = Math.max(s.stars[level.id] || 0, stars);
     if (master) { s.crowns = s.crowns || {}; s.crowns[level.id] = true; }
   });
@@ -922,6 +926,19 @@ async function finish() {
     box.querySelector('[data-retry]').onclick = () => openBriefing(level);
     box.querySelector('[data-menu]').onclick = () => { closeModal(); game = null; show('screen-menu'); };
   });
+  if (won) maybeAskReview(stars);
+}
+
+// Vraag om een review op een fijn moment: na een overwinning, vanaf de 3e gewonnen level,
+// hooguit eens per 60 dagen. Apple toont zijn eigen venster (en beslist zelf of het verschijnt).
+function maybeAskReview(stars) {
+  const s = settings();
+  const DAY = 24 * 3600 * 1000;
+  if ((s.wins || 0) < 3 || stars < 2) return;
+  if (s.reviewAskedAt && Date.now() - s.reviewAskedAt < 60 * DAY) return;
+  setTimeout(async () => {
+    if (await store.requestReview()) storage.update(st => { st.reviewAskedAt = Date.now(); });
+  }, 1800);
 }
 
 function openPause() {
